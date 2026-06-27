@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "mone",
+  "version": "${version}",
+
+  "name": "Mone",
+  "description": "Google Maps for Blockgame",
+
+  "license": "LGPL-3.0",
+  "icon": "assets/mone/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+  },
+  "mixins": [
+      "mixins.mone.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.6",
+    "minecraft": ["26.2"]
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://discord.gg/s6fRBAUpmr"
+      }
+    }
+  }
+}
