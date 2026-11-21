@@ -96,7 +96,7 @@ public class ExampleMoneControl extends Behavior implements Helper {
             return false;
         } else if (msg.trim().equalsIgnoreCase("orderpizza")) {
             try {
-                Util.getPlatform().openUri("https://www.dominos.com/en/pages/order/");
+                java.awt.Desktop.getDesktop().browse(java.net.URI.create("https://www.dominos.com/en/pages/order/"));
             } catch (Exception ignored) {}
             return false;
         }

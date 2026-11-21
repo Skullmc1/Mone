@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 26
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '26'
+          cache: gradle
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+            PRERELEASE="${{ github.event.inputs.prerelease }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            if [[ "$TAG" == *-* ]]; then
+              PRERELEASE="true"
+            else
+              PRERELEASE="false"
+            fi
+          fi
+          VERSION="${TAG#v}"
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build and test for Minecraft 26.2
+        run: |
+          mkdir -p release-artifacts
+          ./gradlew clean compileApiJava compileJava compileLaunchJava :fabric:build test -Ptarget_mc=26.2 -Pmod_version=${{ steps.meta.outputs.version }}
+          cp "fabric/build/libs/mone-fabric-${{ steps.meta.outputs.version }}+mc26.2.jar" release-artifacts/
+
+      - name: Build and test for Minecraft 26.3
+        run: |
+          ./gradlew clean compileApiJava compileJava compileLaunchJava :fabric:build test -Ptarget_mc=26.3 -Pmod_version=${{ steps.meta.outputs.version }}
+          cp "fabric/build/libs/mone-fabric-${{ steps.meta.outputs.version }}+mc26.3.jar" release-artifacts/
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          REPO="${{ github.repository }}"
+
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+            RANGE_END="${TAG}"
+          else
+            PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+            RANGE_END="HEAD"
+          fi
+
+          {
+            echo "## Mone ${TAG}"
+            echo ""
+            echo "- **Minecraft**: \`26.2\`, \`26.3\` (Fabric)"
+            echo "- **Artifacts**:"
+            echo "  - \`mone-fabric-${{ steps.meta.outputs.version }}+mc26.2.jar\` (Minecraft 26.2)"
+            echo "  - \`mone-fabric-${{ steps.meta.outputs.version }}+mc26.3.jar\` (Minecraft 26.3)"
+            echo ""
+            echo "### Changelog"
+            if [ -n "$PREV_TAG" ]; then
+              COMMITS=$(git log "${PREV_TAG}..${RANGE_END}" --no-merges --pretty=format:"- %s (\`%h\`) — %an")
+            else
+              COMMITS=$(git log "${RANGE_END}" --no-merges --pretty=format:"- %s (\`%h\`) — %an")
+            fi
+            if [ -n "$COMMITS" ]; then
+              echo "$COMMITS"
+            else
+              echo "- No code changes since previous release."
+            fi
+            if [ -n "$PREV_TAG" ]; then
+              echo ""
+              echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${TAG}"
+            fi
+          } > release_notes.md
+
+          cat release_notes.md
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+          JAR_262="release-artifacts/mone-fabric-${VERSION}+mc26.2.jar"
+          JAR_263="release-artifacts/mone-fabric-${VERSION}+mc26.3.jar"
+
+          ls -la release-artifacts/
+
+          EXTRA_ARGS=()
+          if [ "${{ steps.meta.outputs.prerelease }}" = "true" ]; then
+            EXTRA_ARGS+=(--prerelease)
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$JAR_262" "$JAR_263" --clobber
+            gh release edit "$TAG" --notes-file release_notes.md "${EXTRA_ARGS[@]}"
+          else
+            gh release create "$TAG" "$JAR_262" "$JAR_263" \
+              --title "Mone ${TAG}" \
+              --notes-file release_notes.md \
+              "${EXTRA_ARGS[@]}"
+          fi

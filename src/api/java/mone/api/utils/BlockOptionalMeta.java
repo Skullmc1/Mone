@@ -301,35 +301,7 @@ public final class BlockOptionalMeta {
         }
 
         public static CompletableFuture<RegistryAccess> load() {
-            // Simplified from {@link net.minecraft.server.WorldLoader#load()}
-            CloseableResourceManager closeableResourceManager = new MultiPackResourceManager(
-                PackType.SERVER_DATA,
-                List.of(ServerPacksSource.createVanillaPackSource())
-            );
-            LayeredRegistryAccess<RegistryLayer> baseLayeredRegistry = RegistryLayer.createRegistryAccess();
-            List<Registry.PendingTags<?>> pendingTags = TagLoader.loadTagsForExistingRegistries(
-                closeableResourceManager, baseLayeredRegistry.getLayer(RegistryLayer.STATIC)
-            );
-            List<HolderLookup.RegistryLookup<?>> worldGenRegistryLookupList = TagLoader.buildUpdatedLookups(
-                baseLayeredRegistry.getAccessForLoading(RegistryLayer.WORLDGEN),
-                pendingTags
-            );
-            RegistryAccess.Frozen worldgenRegistries = RegistryDataLoader.load(
-                closeableResourceManager,
-                worldGenRegistryLookupList,
-                RegistryDataLoader.WORLDGEN_REGISTRIES,
-                ForkJoinPool.commonPool()
-            ).join();
-            LayeredRegistryAccess<RegistryLayer> layeredRegistryAccess = baseLayeredRegistry.replaceFrom(
-                RegistryLayer.WORLDGEN,
-                worldgenRegistries
-            );
-            return ReloadableServerRegistries.reload(
-                layeredRegistryAccess,
-                pendingTags,
-                closeableResourceManager,
-                ForkJoinPool.commonPool()
-            ).thenApply(r -> r.layers().compositeAccess());
+            return McRegistryCompat.loadRegistryAccess();
         }
     }
 }

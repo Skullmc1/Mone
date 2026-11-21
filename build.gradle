@@ -15,6 +15,17 @@
  * along with Mone.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+ext.targetMc = (project.findProperty('target_mc') ?: '26.3').toString()
+if (ext.targetMc == '26.2') {
+    ext.mcVersion = project.minecraft_version_26_2
+    ext.fabricLoaderVersion = project.fabric_version_26_2
+} else if (ext.targetMc == '26.3') {
+    ext.mcVersion = project.minecraft_version_26_3
+    ext.fabricLoaderVersion = project.fabric_version_26_3
+} else {
+    throw new GradleException("Unsupported target_mc: ${ext.targetMc}. Supported values: 26.2, 26.3")
+}
+
 allprojects {
     apply plugin: 'java'
     apply plugin: "xyz.wagyourtail.unimined"
@@ -36,7 +47,7 @@ allprojects {
         println "Detected version " + version
     }*/
 
-    version = rootProject.mod_version
+    version = "${rootProject.mod_version}+mc${rootProject.mcVersion}"
     group = rootProject.maven_group
 
     java {
@@ -93,7 +104,7 @@ allprojects {
     }
 
     unimined.minecraft(sourceSets.main, true) {
-        version rootProject.minecraft_version
+        version rootProject.mcVersion
 
         mappings {
             mojmap()
@@ -121,10 +132,12 @@ base.archivesName = base.archivesName.get() + "-common"
 
 sourceSets {
     api {
+        java.srcDir "src/versions/${rootProject.targetMc}/api/java"
         compileClasspath += main.compileClasspath
         runtimeClasspath += main.runtimeClasspath
     }
     main {
+        java.srcDir "src/versions/${rootProject.targetMc}/main/java"
         compileClasspath += api.output
         runtimeClasspath += api.output
     }
@@ -133,6 +146,7 @@ sourceSets {
         runtimeClasspath += main.compileClasspath + main.runtimeClasspath + main.output
     }
     launch {
+        java.srcDir "src/versions/${rootProject.targetMc}/launch/java"
         compileClasspath += main.compileClasspath + main.runtimeClasspath + main.output
         runtimeClasspath += main.compileClasspath + main.runtimeClasspath + main.output
     }

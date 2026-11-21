@@ -22,9 +22,9 @@ import mone.Mone;
 import mone.api.utils.BetterBlockPos;
 import mone.api.utils.IPlayerContext;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
+import mone.utils.McCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.spider.Spider;
 import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
 
@@ -77,7 +77,7 @@ public class Avoidance {
                     .filter(entity -> entity instanceof Mob)
                     .filter(entity -> (!(entity instanceof Spider)) || ctx.player().getLightLevelDependentMagicValue() < 0.5)
                     .filter(entity -> !(entity instanceof ZombifiedPiglin) || ((ZombifiedPiglin) entity).getLastHurtByMob() != null)
-                    .filter(entity -> !(entity instanceof EnderMan) || ((EnderMan) entity).isCreepy())
+                    .filter(McCompat::isNotPassiveEnderman)
                     .forEach(entity -> res.add(new Avoidance(entity.blockPosition(), mobCoeff, MoneAPI.getSettings().mobAvoidanceRadius.value)));
         }
         return res;

@@ -26,7 +26,7 @@ base.archivesName = base.archivesName.get() + "-fabric"
 
 unimined.minecraft {
     fabric {
-        loader project.fabric_version
+        loader rootProject.fabricLoaderVersion
     }
 }
 
@@ -50,9 +50,10 @@ dependencies {
 
 processResources {
     inputs.property "version", project.version
+    inputs.property "minecraft_version", rootProject.mcVersion
 
     filesMatching("fabric.mod.json") {
-        expand "version": project.version
+        expand "version": project.version, "minecraft_version": rootProject.mcVersion
     }
 }
 

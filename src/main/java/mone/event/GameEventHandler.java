@@ -28,6 +28,7 @@ import mone.api.utils.Pair;
 import mone.cache.CachedChunk;
 import mone.cache.WorldProvider;
 import mone.utils.BlockStateInterface;
+import mone.utils.MinimapRenderer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -124,6 +125,10 @@ public final class GameEventHandler implements IEventBus, Helper {
             }
         }
 
+        ChunkPos changedChunk = event.getChunkPos();
+        if (changedChunk != null) {
+            MinimapRenderer.markChunkDirty(changedChunk.x(), changedChunk.z());
+        }
         listeners.forEach(l -> l.onBlockChange(event));
     }
 
@@ -141,6 +146,7 @@ public final class GameEventHandler implements IEventBus, Helper {
             if (event.getWorld() != null) {
                 cache.initWorld(event.getWorld());
             }
+            MinimapRenderer.clearCache();
         }
 
         listeners.forEach(l -> l.onWorldEvent(event));

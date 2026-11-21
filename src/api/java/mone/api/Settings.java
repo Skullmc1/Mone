@@ -1559,6 +1559,61 @@ public final class Settings {
     public final Setting<Boolean> allowWalkOnMagmaBlocks = new Setting<>(false);
 
     /**
+     * Display the HUD minimap (toggled via #map)
+     */
+    public final Setting<Boolean> minimap = new Setting<>(false);
+
+    /**
+     * On-screen size (width and height in GUI pixels) of the minimap
+     */
+    public final Setting<Integer> minimapSize = new Setting<>(128);
+
+    /**
+     * Radius in blocks around the player shown on the minimap
+     */
+    public final Setting<Integer> minimapRadius = new Setting<>(64);
+
+    /**
+     * Minimap view mode: "auto", "surface", "cave", or "layer"
+     */
+    public final Setting<String> minimapMode = new Setting<>("auto");
+
+    /**
+     * Screen corner for the minimap: "topright", "topleft", "bottomright", or "bottomleft"
+     */
+    public final Setting<String> minimapPosition = new Setting<>("topright");
+
+    /**
+     * Show entities on the minimap
+     */
+    public final Setting<Boolean> minimapShowEntities = new Setting<>(true);
+
+    /**
+     * Show the current Mone path and goal on the minimap
+     */
+    public final Setting<Boolean> minimapShowPath = new Setting<>(true);
+
+    /**
+     * Rotate the minimap so the player always faces up (heading-up mode)
+     */
+    public final Setting<Boolean> minimapRotate = new Setting<>(true);
+
+    /**
+     * Render the minimap as a circle instead of a square
+     */
+    public final Setting<Boolean> minimapCircular = new Setting<>(true);
+
+    /**
+     * Show Mone waypoints and death markers on the minimap and fullscreen map
+     */
+    public final Setting<Boolean> minimapShowWaypoints = new Setting<>(true);
+
+    /**
+     * Keybind to open the interactive fullscreen world map (e.g. "M", "N", "F6")
+     */
+    public final Setting<String> minimapFullscreenKey = new Setting<>("M");
+
+    /**
      * A map of lowercase setting field names to their respective setting
      */
     public final Map<String, Setting<?>> byLowerName;

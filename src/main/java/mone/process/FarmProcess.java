@@ -260,7 +260,7 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
             }
             if (state.getBlock() instanceof BonemealableBlock) {
                 BonemealableBlock ig = (BonemealableBlock) state.getBlock();
-                if (ig.isValidBonemealTarget(ctx.world(), pos, state) && ig.isBonemealSuccess(ctx.world(), ctx.world().getRandom(), pos, state)) {
+                if (mone.utils.McCompat.isValidBonemeal(ig, ctx.world(), pos, state)) {
                     bonemealable.add(pos);
                 }
             }
