@@ -38,10 +38,12 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -91,9 +93,11 @@ public final class MinimapRenderer {
     static final class ChunkTile {
         final int[] pixelsABGR = new int[256];
         final int[] heights = new int[256];
+        final byte[] spawnRisk = new byte[256]; // 0 = safe, 1 = night-spawnable, 2 = always-spawnable
         volatile ViewMode mode;
         volatile int refY = Integer.MIN_VALUE;
         volatile boolean dirty = true;
+        volatile boolean fromDisk = false;
     }
 
     private static final Identifier TEXTURE_ID = Identifier.fromNamespaceAndPath("mone", "minimap");
@@ -153,6 +157,7 @@ public final class MinimapRenderer {
 
     private static final ConcurrentHashMap<Long, ChunkTile> CHUNK_CACHE = new ConcurrentHashMap<>();
     private static final Set<Long> PENDING_CHUNKS = ConcurrentHashMap.newKeySet();
+    private static final Set<Long> DISK_MISSES = ConcurrentHashMap.newKeySet();
     private static final AtomicBoolean CACHE_UPDATED = new AtomicBoolean(false);
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
@@ -201,9 +206,15 @@ public final class MinimapRenderer {
         textureDirty = true;
     }
 
+    public static void invalidateTextureOnly() {
+        textureDirty = true;
+    }
+
     public static void clearCache() {
+        MapDiskCache.flushAll();
         CHUNK_CACHE.clear();
         PENDING_CHUNKS.clear();
+        DISK_MISSES.clear();
         cachedCenterX = Integer.MIN_VALUE;
         cachedCenterZ = Integer.MIN_VALUE;
         cachedMode = null;
@@ -213,7 +224,9 @@ public final class MinimapRenderer {
     }
 
     public static void markChunkDirty(int chunkX, int chunkZ) {
-        ChunkTile tile = CHUNK_CACHE.get(chunkKey(chunkX, chunkZ));
+        long key = chunkKey(chunkX, chunkZ);
+        DISK_MISSES.remove(key);
+        ChunkTile tile = CHUNK_CACHE.get(key);
         if (tile != null) {
             tile.dirty = true;
         }
@@ -283,6 +296,7 @@ public final class MinimapRenderer {
         if (cachedLevel != level) {
             clearCache();
             cachedLevel = level;
+            MapDiskCache.switchWorld(mc, level);
         }
 
         float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
@@ -524,9 +538,13 @@ public final class MinimapRenderer {
                 ChunkTile tile = CHUNK_CACHE.get(key);
                 boolean stale = tile == null
                         || tile.dirty
-                        || tile.mode != mode
-                        || (mode != ViewMode.SURFACE && tile.refY != centerY);
+                        || (tile.fromDisk && level.hasChunk(cx, cz))
+                        || (!tile.fromDisk && tile.mode != mode)
+                        || (!tile.fromDisk && mode != ViewMode.SURFACE && tile.refY != centerY);
                 if (stale) {
+                    if (tile == null && DISK_MISSES.contains(key) && !level.hasChunk(cx, cz)) {
+                        continue;
+                    }
                     if (candidates == null) {
                         candidates = new ArrayList<>();
                     }
@@ -553,15 +571,48 @@ public final class MinimapRenderer {
             }
             int cx = (int) entry[0];
             int cz = (int) entry[1];
+            long key = chunkKey(cx, cz);
             LevelChunk chunk = (LevelChunk) level.getChunk(cx, cz, ChunkStatus.FULL, false);
-            if (chunk == null || chunk.isEmpty()) {
+            boolean isLoaded = chunk != null && !chunk.isEmpty();
+
+            if (!isLoaded) {
+                if (DISK_MISSES.contains(key) || !PENDING_CHUNKS.add(key)) {
+                    continue;
+                }
+                final ClientLevel capturedLevel = level;
+                final int fCx = cx;
+                final int fCz = cz;
+                WORKER_EXECUTOR.execute(() -> {
+                    try {
+                        if (cachedLevel != capturedLevel) {
+                            return;
+                        }
+                        MapDiskCache.StoredChunk stored = MapDiskCache.loadChunk(fCx, fCz);
+                        if (stored != null) {
+                            ChunkTile tile = CHUNK_CACHE.computeIfAbsent(key, k -> new ChunkTile());
+                            System.arraycopy(stored.pixelsABGR, 0, tile.pixelsABGR, 0, 256);
+                            System.arraycopy(stored.heights, 0, tile.heights, 0, 256);
+                            java.util.Arrays.fill(tile.spawnRisk, (byte) 0);
+                            tile.mode = ViewMode.SURFACE;
+                            tile.fromDisk = true;
+                            tile.dirty = false;
+                            CACHE_UPDATED.set(true);
+                        } else {
+                            DISK_MISSES.add(key);
+                        }
+                    } catch (Throwable ignored) {
+                    } finally {
+                        PENDING_CHUNKS.remove(key);
+                    }
+                });
+                scheduled++;
                 continue;
             }
 
-            long key = chunkKey(cx, cz);
             if (!PENDING_CHUNKS.add(key)) {
                 continue;
             }
+            DISK_MISSES.remove(key);
 
             final ClientLevel capturedLevel = level;
             final LevelChunk capturedChunk = chunk;
@@ -578,6 +629,10 @@ public final class MinimapRenderer {
                     ChunkTile tile = CHUNK_CACHE.computeIfAbsent(key, k -> new ChunkTile());
                     ChunkTile northTile = CHUNK_CACHE.get(chunkKey(fCx, fCz - 1));
                     fillChunkTile(capturedLevel, capturedChunk, tile, northTile, fCx, fCz, fPlayerY, minY, maxY, fMode);
+                    if (fMode == ViewMode.SURFACE) {
+                        MapDiskCache.saveChunk(fCx, fCz, tile.pixelsABGR, tile.heights);
+                        MapDiskCache.maybeFlushPeriodic();
+                    }
                     CACHE_UPDATED.set(true);
                 } catch (Throwable ignored) {
                     // Safely ignore transient chunk unload races on background worker
@@ -596,6 +651,7 @@ public final class MinimapRenderer {
         int baseZ = cz << 4;
         int[] pixels = tile.pixelsABGR;
         int[] heights = tile.heights;
+        byte[] spawnRisk = tile.spawnRisk;
         int[] northHeights = (northTile != null && !northTile.dirty && northTile.mode == mode) ? northTile.heights : null;
 
         for (int lz = 0; lz < 16; lz++) {
@@ -613,15 +669,16 @@ public final class MinimapRenderer {
                 }
 
                 switch (mode) {
-                    case SURFACE -> pixels[idx] = sampleSurface(level, chunk, WORKER_SCAN_POS, wx, wz, lx, lz, minY, maxY, northY, heights, idx);
-                    case CAVE -> pixels[idx] = sampleCave(level, chunk, WORKER_SCAN_POS, wx, playerY, wz, minY, maxY, northY, heights, idx);
-                    case LAYER -> pixels[idx] = sampleLayer(level, chunk, WORKER_SCAN_POS, wx, playerY, wz, minY, maxY, heights, idx);
+                    case SURFACE -> pixels[idx] = sampleSurface(level, chunk, WORKER_SCAN_POS, wx, wz, lx, lz, minY, maxY, northY, heights, spawnRisk, idx);
+                    case CAVE -> pixels[idx] = sampleCave(level, chunk, WORKER_SCAN_POS, wx, playerY, wz, minY, maxY, northY, heights, spawnRisk, idx);
+                    case LAYER -> pixels[idx] = sampleLayer(level, chunk, WORKER_SCAN_POS, wx, playerY, wz, minY, maxY, heights, spawnRisk, idx);
                 }
             }
         }
 
         tile.mode = mode;
         tile.refY = playerY;
+        tile.fromDisk = false;
         tile.dirty = false;
     }
 
@@ -630,6 +687,10 @@ public final class MinimapRenderer {
         if (pixels == null) {
             return;
         }
+
+        Settings settings = MoneAPI.getSettings();
+        boolean showSpawns = settings.minimapSpawnOverlay.value;
+        boolean showGrid = settings.minimapChunkGrid.value;
 
         double maxDistSq = (visibleRadius + 0.25) * (visibleRadius + 0.25);
         int lastCx = Integer.MIN_VALUE;
@@ -659,12 +720,40 @@ public final class MinimapRenderer {
                     lastCz = cz;
                 }
 
-                int abgr = (cachedTile != null) ? cachedTile.pixelsABGR[lzRow | (wx & 15)] : ABGR_UNLOADED;
+                int localIdx = lzRow | (wx & 15);
+                int abgr = (cachedTile != null) ? cachedTile.pixelsABGR[localIdx] : ABGR_UNLOADED;
+                byte risk = (cachedTile != null) ? cachedTile.spawnRisk[localIdx] : 0;
+                abgr = applyMapOverlays(abgr, risk, wx, wz, showSpawns, showGrid);
                 pixels.setPixelABGR(tx, tz, abgr);
             }
         }
 
         texture.upload();
+    }
+
+    static int applyMapOverlays(int abgr, byte spawnRisk, int wx, int wz, boolean showSpawns, boolean showGrid) {
+        if (showSpawns && spawnRisk != 0) {
+            int overlayRgb = (spawnRisk == 2) ? 0xFF2828 : 0xFFE033;
+            abgr = blendAbgrWithRgb(abgr, overlayRgb, 0.42f);
+        }
+        if (showGrid && ((wx & 15) == 0 || (wz & 15) == 0)) {
+            abgr = blendAbgrWithRgb(abgr, 0xA8C0E8, 0.28f);
+        }
+        return abgr;
+    }
+
+    private static int blendAbgrWithRgb(int abgr, int overlayRgb, float alpha) {
+        int r = abgr & 0xFF;
+        int g = (abgr >> 8) & 0xFF;
+        int b = (abgr >> 16) & 0xFF;
+        int or = (overlayRgb >> 16) & 0xFF;
+        int og = (overlayRgb >> 8) & 0xFF;
+        int ob = overlayRgb & 0xFF;
+        float inv = 1.0f - alpha;
+        int nr = Mth.clamp((int) (r * inv + or * alpha), 0, 255);
+        int ng = Mth.clamp((int) (g * inv + og * alpha), 0, 255);
+        int nb = Mth.clamp((int) (b * inv + ob * alpha), 0, 255);
+        return 0xFF000000 | (nb << 16) | (ng << 8) | nr;
     }
 
     private static void pruneFarChunks(int playerCx, int playerCz, int maxChunkDist) {
@@ -735,8 +824,31 @@ public final class MinimapRenderer {
         return false;
     }
 
+    private static byte computeSpawnRisk(ClientLevel level, LevelChunk chunk, BlockPos.MutableBlockPos pos,
+                                         int wx, int surfaceY, int wz, BlockState surfaceState, int maxY) {
+        if (surfaceY >= maxY || surfaceState == null || !surfaceState.getFluidState().isEmpty()) {
+            return 0;
+        }
+        pos.set(wx, surfaceY, wz);
+        if (!surfaceState.isCollisionShapeFullBlock(level, pos)) {
+            return 0;
+        }
+        pos.set(wx, surfaceY + 1, wz);
+        BlockState above = chunk.getBlockState(pos);
+        if (!above.isAir() || !above.getFluidState().isEmpty()) {
+            return 0;
+        }
+        int blockLight = level.getBrightness(LightLayer.BLOCK, pos);
+        if (blockLight > 0) {
+            return 0;
+        }
+        int skyLight = level.getBrightness(LightLayer.SKY, pos);
+        return (skyLight == 0) ? (byte) 2 : (byte) 1;
+    }
+
     private static int sampleSurface(ClientLevel level, LevelChunk chunk, BlockPos.MutableBlockPos pos,
-                                     int wx, int wz, int lx, int lz, int minY, int maxY, int northY, int[] heights, int idx) {
+                                     int wx, int wz, int lx, int lz, int minY, int maxY, int northY,
+                                     int[] heights, byte[] spawnRisk, int idx) {
         int y = Math.min(maxY, chunk.getHeight(Heightmap.Types.WORLD_SURFACE, lx, lz));
 
         BlockState state = null;
@@ -752,12 +864,16 @@ public final class MinimapRenderer {
 
         if (state == null) {
             heights[idx] = Integer.MIN_VALUE;
+            spawnRisk[idx] = 0;
             return ABGR_VOID;
         }
 
         heights[idx] = y;
 
         if (state.getFluidState().is(Fluids.WATER) || state.getFluidState().is(Fluids.FLOWING_WATER)) {
+            spawnRisk[idx] = 0;
+            pos.set(wx, y, wz);
+            int biomeWater = BiomeColors.getAverageWaterColor(level, pos) & 0xFFFFFF;
             int depth = 0;
             int scanY = y - 1;
             while (scanY >= minY && depth < 16) {
@@ -770,9 +886,11 @@ public final class MinimapRenderer {
                 scanY--;
             }
             float shade = 1.08f - (depth / 16.0f) * 0.45f;
-            return toAbgr(shadeRgb(0x3468D4, shade));
+            return toAbgr(shadeRgb(biomeWater, shade));
         }
 
+        spawnRisk[idx] = computeSpawnRisk(level, chunk, pos, wx, y, wz, state, maxY);
+        pos.set(wx, y, wz);
         int rgb = getBlockRgb(level, pos, state);
         float shade = 1.0f;
         if (northY != Integer.MIN_VALUE) {
@@ -787,7 +905,8 @@ public final class MinimapRenderer {
     }
 
     private static int sampleCave(ClientLevel level, LevelChunk chunk, BlockPos.MutableBlockPos pos,
-                                  int wx, int playerY, int wz, int minY, int maxY, int northY, int[] heights, int idx) {
+                                  int wx, int playerY, int wz, int minY, int maxY, int northY,
+                                  int[] heights, byte[] spawnRisk, int idx) {
         int startY = Mth.clamp(playerY + 1, minY, maxY);
 
         pos.set(wx, startY, wz);
@@ -841,6 +960,7 @@ public final class MinimapRenderer {
 
         if (floorState == null) {
             heights[idx] = Integer.MIN_VALUE;
+            spawnRisk[idx] = 0;
             pos.set(wx, Mth.clamp(playerY, minY, maxY), wz);
             BlockState wallState = chunk.getBlockState(pos);
             Integer special = SPECIAL_BLOCK_COLORS.get(wallState.getBlock());
@@ -852,6 +972,7 @@ public final class MinimapRenderer {
         }
 
         heights[idx] = floorY;
+        spawnRisk[idx] = computeSpawnRisk(level, chunk, pos, wx, floorY, wz, floorState, maxY);
         pos.set(wx, floorY, wz);
         int rgb = getBlockRgb(level, pos, floorState);
 
@@ -869,7 +990,8 @@ public final class MinimapRenderer {
     }
 
     private static int sampleLayer(ClientLevel level, LevelChunk chunk, BlockPos.MutableBlockPos pos,
-                                   int wx, int playerY, int wz, int minY, int maxY, int[] heights, int idx) {
+                                   int wx, int playerY, int wz, int minY, int maxY,
+                                   int[] heights, byte[] spawnRisk, int idx) {
         int footY = Mth.clamp(playerY, minY, maxY);
         int headY = Mth.clamp(playerY + 1, minY, maxY);
 
@@ -881,17 +1003,20 @@ public final class MinimapRenderer {
         Integer footSpecial = SPECIAL_BLOCK_COLORS.get(footState.getBlock());
         if (footSpecial != null && footState.getFluidState().isEmpty()) {
             heights[idx] = footY;
+            spawnRisk[idx] = 0;
             return toAbgr(footSpecial);
         }
         Integer headSpecial = SPECIAL_BLOCK_COLORS.get(headState.getBlock());
         if (headSpecial != null && headState.getFluidState().isEmpty()) {
             heights[idx] = headY;
+            spawnRisk[idx] = 0;
             return toAbgr(headSpecial);
         }
 
         pos.set(wx, footY, wz);
         if (!isPassableForCave(level, pos, footState)) {
             heights[idx] = footY;
+            spawnRisk[idx] = 0;
             int rgb = getBlockRgb(level, pos, footState);
             float shade = footState.getFluidState().isEmpty() ? 0.58f : 1.0f;
             return toAbgr(shadeRgb(rgb, shade));
@@ -903,6 +1028,8 @@ public final class MinimapRenderer {
             BlockState below = chunk.getBlockState(pos);
             if (!isPassableForCave(level, pos, below)) {
                 heights[idx] = y;
+                spawnRisk[idx] = computeSpawnRisk(level, chunk, pos, wx, y, wz, below, maxY);
+                pos.set(wx, y, wz);
                 int rgb = getBlockRgb(level, pos, below);
                 int depth = (footY - 1) - y;
                 float shade = below.getFluidState().isEmpty()
@@ -913,6 +1040,7 @@ public final class MinimapRenderer {
         }
 
         heights[idx] = Integer.MIN_VALUE;
+        spawnRisk[idx] = 0;
         return ABGR_VOID;
     }
 
@@ -921,9 +1049,28 @@ public final class MinimapRenderer {
     }
 
     private static int getBlockRgb(ClientLevel level, BlockPos pos, BlockState state) {
-        Integer special = SPECIAL_BLOCK_COLORS.get(state.getBlock());
+        Block block = state.getBlock();
+        Integer special = SPECIAL_BLOCK_COLORS.get(block);
         if (special != null) {
             return special;
+        }
+        // Biome-tinted grass, foliage, and water
+        if (block == Blocks.GRASS_BLOCK || block == Blocks.SHORT_GRASS || block == Blocks.TALL_GRASS
+                || block == Blocks.FERN || block == Blocks.LARGE_FERN || block == Blocks.SUGAR_CANE) {
+            return BiomeColors.getAverageGrassColor(level, pos) & 0xFFFFFF;
+        }
+        if (state.is(BlockTags.LEAVES)) {
+            if (block == Blocks.CHERRY_LEAVES || block == Blocks.AZALEA_LEAVES || block == Blocks.FLOWERING_AZALEA_LEAVES
+                    || block == Blocks.PALE_OAK_LEAVES) {
+                MapColor mc = state.getMapColor(level, pos);
+                if (mc != null && mc != MapColor.NONE) {
+                    return mc.col;
+                }
+            }
+            return shadeRgb(BiomeColors.getAverageFoliageColor(level, pos) & 0xFFFFFF, 0.85f);
+        }
+        if (block == Blocks.VINE || block == Blocks.LILY_PAD) {
+            return BiomeColors.getAverageFoliageColor(level, pos) & 0xFFFFFF;
         }
         MapColor mapColor = state.getMapColor(level, pos);
         if (mapColor != null && mapColor != MapColor.NONE) {
@@ -1155,14 +1302,15 @@ public final class MinimapRenderer {
                 continue;
             }
 
-            drawWaypointMarker(guiGraphics, sx, sy, wp.getTag(), offScreen);
+            drawWaypointMarker(guiGraphics, sx, sy, wp, offScreen);
         }
     }
 
-    static void drawWaypointMarker(GuiGraphicsExtractor guiGraphics, int sx, int sy, IWaypoint.Tag tag, boolean compact) {
-        int color = getWaypointColor(tag);
+    static void drawWaypointMarker(GuiGraphicsExtractor guiGraphics, int sx, int sy, IWaypoint wp, boolean compact) {
+        int color = MapDiskCache.getWaypointColor(wp);
+        IWaypoint.Tag tag = wp.getTag();
         if (tag == IWaypoint.Tag.DEATH) {
-            // Red X death marker
+            // Red (or custom colored) X death marker
             int r = compact ? 2 : 3;
             for (int d = -r; d <= r; d++) {
                 guiGraphics.fill(sx + d - 1, sy + d - 1, sx + d + 2, sy + d + 2, 0xCC000000);
@@ -1190,7 +1338,7 @@ public final class MinimapRenderer {
         }
     }
 
-    static int getWaypointColor(IWaypoint.Tag tag) {
+    static int getDefaultWaypointColor(IWaypoint.Tag tag) {
         if (tag == null) {
             return 0xFFCC66FF;
         }

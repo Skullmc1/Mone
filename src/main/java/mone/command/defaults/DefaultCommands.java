@@ -69,7 +69,8 @@ public final class DefaultCommands {
                 new CommandAlias(Mone, "home", "Path to your home waypoint", "waypoints goto home"),
                 new SelCommand(Mone),
                 new ElytraCommand(Mone),
-                new MapCommand(Mone)
+                new MapCommand(Mone),
+                new HudCommand(Mone)
         ));
         ExecutionControlCommands prc = new ExecutionControlCommands(Mone);
         commands.add(prc.pauseCommand);

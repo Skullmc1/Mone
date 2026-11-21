@@ -18,6 +18,7 @@
 package mone.launch.mixins;
 
 import mone.utils.MinimapRenderer;
+import mone.utils.MoneHudRenderer;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
@@ -39,6 +40,7 @@ public class MixinHud {
     )
     private void onExtractRenderState(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (!this.isHidden) {
+            MoneHudRenderer.render(guiGraphics, deltaTracker);
             MinimapRenderer.render(guiGraphics, deltaTracker);
         }
     }

@@ -1614,6 +1614,21 @@ public final class Settings {
     public final Setting<String> minimapFullscreenKey = new Setting<>("M");
 
     /**
+     * Show 16x16 chunk border grid lines on the minimap and fullscreen map
+     */
+    public final Setting<Boolean> minimapChunkGrid = new Setting<>(false);
+
+    /**
+     * Highlight mob-spawnable dark blocks (yellow = night, red = always) on the map
+     */
+    public final Setting<Boolean> minimapSpawnOverlay = new Setting<>(false);
+
+    /**
+     * Enable the Mone active-work HUD border and status banner (toggled via #hud)
+     */
+    public final Setting<Boolean> hud = new Setting<>(false);
+
+    /**
      * A map of lowercase setting field names to their respective setting
      */
     public final Map<String, Setting<?>> byLowerName;

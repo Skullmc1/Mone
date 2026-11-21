@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 public class MapCommand extends Command {
 
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-            "on", "off", "toggle", "full", "mode", "radius", "size", "pos", "rotate", "shape", "waypoints", "entities", "path", "key"
+            "on", "off", "toggle", "full", "mode", "radius", "size", "pos", "rotate", "shape", "waypoints", "chunks", "spawns", "entities", "path", "key"
     );
     private static final List<String> MODES = Arrays.asList("auto", "surface", "cave", "layer");
     private static final List<String> POSITIONS = Arrays.asList("topright", "topleft", "bottomright", "bottomleft");
@@ -148,6 +148,18 @@ public class MapCommand extends Command {
                 settings.minimapShowWaypoints.value = !settings.minimapShowWaypoints.value;
                 logDirect("Minimap waypoints " + (settings.minimapShowWaypoints.value ? "enabled" : "disabled"));
             }
+            case "chunks", "grid" -> {
+                args.requireMax(0);
+                settings.minimapChunkGrid.value = !settings.minimapChunkGrid.value;
+                MinimapRenderer.invalidateTextureOnly();
+                logDirect("Map chunk grid " + (settings.minimapChunkGrid.value ? "enabled" : "disabled"));
+            }
+            case "spawns", "spawn", "light" -> {
+                args.requireMax(0);
+                settings.minimapSpawnOverlay.value = !settings.minimapSpawnOverlay.value;
+                MinimapRenderer.invalidateTextureOnly();
+                logDirect("Map mob-spawn overlay " + (settings.minimapSpawnOverlay.value ? "enabled" : "disabled"));
+            }
             case "key", "keybind" -> {
                 if (!args.hasAny()) {
                     logDirect("Current fullscreen map keybind: " + settings.minimapFullscreenKey.value);
@@ -224,6 +236,8 @@ public class MapCommand extends Command {
                 "> map rotate - Toggle heading-up rotation vs north-locked",
                 "> map shape - Toggle circular vs square minimap shape",
                 "> map waypoints - Toggle waypoint and death markers",
+                "> map chunks - Toggle 16x16 chunk border grid",
+                "> map spawns - Toggle mob-spawning light overlay (yellow = night, red = always)",
                 "> map key <key> - Set keybind for the fullscreen world map (default: M)",
                 "> map entities - Toggle entity markers on the minimap",
                 "> map path - Toggle path and goal overlay on the minimap"
