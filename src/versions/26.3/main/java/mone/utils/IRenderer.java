@@ -130,9 +130,13 @@ public interface IRenderer {
         IRenderer.color[3] = alpha;
     }
 
+    ByteBufferBuilder LINE_BUFFER = new ByteBufferBuilder(1024);
+    ByteBufferBuilder QUAD_BUFFER = new ByteBufferBuilder(4096);
+
     static BufferBuilder startLines(Color color, float alpha) {
         glColor(color, alpha);
-        return new BufferBuilder(new ByteBufferBuilder(16, 256), PrimitiveTopology.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
+        LINE_BUFFER.clear();
+        return new BufferBuilder(LINE_BUFFER, PrimitiveTopology.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
     }
 
     static BufferBuilder startLines(Color color) {
@@ -140,13 +144,16 @@ public interface IRenderer {
     }
 
     static void endLines(BufferBuilder bufferBuilder, boolean ignoredDepth) {
+        LINE_BUFFER.discard();
     }
 
     static BufferBuilder startBlockQuads() {
-        return new BufferBuilder(new ByteBufferBuilder(16, 256), PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
+        QUAD_BUFFER.clear();
+        return new BufferBuilder(QUAD_BUFFER, PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
     }
 
     static void endBuffer(BufferBuilder bufferBuilder, RenderType renderType) {
+        QUAD_BUFFER.discard();
     }
 
     static void emitLine(BufferBuilder bufferBuilder, PoseStack stack, double x1, double y1, double z1, double x2, double y2, double z2, float lineWidth) {
