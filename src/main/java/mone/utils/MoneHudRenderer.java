@@ -21,7 +21,26 @@ import mone.api.IMone;
 import mone.api.MoneAPI;
 import mone.api.behavior.IPathingBehavior;
 import mone.api.pathing.goals.Goal;
+import mone.api.pathing.goals.GoalBlock;
+import mone.api.pathing.goals.GoalNear;
+import mone.api.pathing.goals.GoalRunAway;
+import mone.api.pathing.goals.GoalStrictDirection;
+import mone.api.pathing.goals.GoalXZ;
+import mone.api.pathing.goals.GoalYLevel;
 import mone.api.process.IMoneProcess;
+import mone.process.AutoDropOffProcess;
+import mone.process.AutoEatProcess;
+import mone.process.BackfillProcess;
+import mone.process.BuilderProcess;
+import mone.process.CustomGoalProcess;
+import mone.process.ElytraProcess;
+import mone.process.ExploreProcess;
+import mone.process.FarmProcess;
+import mone.process.FollowProcess;
+import mone.process.GetToBlockProcess;
+import mone.process.InventoryPauserProcess;
+import mone.process.MineProcess;
+import mone.process.SurvivalSafetyProcess;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -115,21 +134,79 @@ public final class MoneHudRenderer {
         boolean isPathing = pathing != null && (pathing.isPathing() || pathing.hasPath() || pathing.getInProgress().isPresent());
 
         if (activeProc.isPresent() && activeProc.get().isActive()) {
-            String name = activeProc.get().displayName();
-            if (name != null && !name.isBlank()) {
-                return name;
+            IMoneProcess proc = activeProc.get();
+            if (proc instanceof MineProcess mp) {
+                return mp.getFriendlySummary();
             }
-            return activeProc.get().getClass().getSimpleName();
+            if (proc instanceof CustomGoalProcess) {
+                return formatGoal(pathing != null ? pathing.getGoal() : null);
+            }
+            if (proc instanceof FarmProcess) {
+                return "Farming";
+            }
+            if (proc instanceof ExploreProcess) {
+                return "Exploring";
+            }
+            if (proc instanceof FollowProcess) {
+                return "Following";
+            }
+            if (proc instanceof BuilderProcess) {
+                return "Building";
+            }
+            if (proc instanceof GetToBlockProcess) {
+                return "Finding block";
+            }
+            if (proc instanceof ElytraProcess) {
+                return "Elytra flying";
+            }
+            if (proc instanceof AutoEatProcess) {
+                return "Eating food";
+            }
+            if (proc instanceof SurvivalSafetyProcess) {
+                return "Evading enemy mobs";
+            }
+            if (proc instanceof AutoDropOffProcess) {
+                return proc.displayName();
+            }
+            if (proc instanceof BackfillProcess) {
+                return "Backfilling";
+            }
+            if (proc instanceof InventoryPauserProcess) {
+                return "Managing inventory";
+            }
+            return "Working";
         }
 
         if (isPathing) {
-            Goal goal = pathing.getGoal();
-            if (goal != null) {
-                return "Pathing: " + goal;
-            }
-            return "Pathing";
+            return formatGoal(pathing.getGoal());
         }
 
         return null;
+    }
+
+    private static String formatGoal(Goal goal) {
+        if (goal == null) {
+            return "Pathing";
+        }
+        if (goal instanceof GoalBlock gb) {
+            return "Going to " + gb.x + ", " + gb.y + ", " + gb.z;
+        }
+        if (goal instanceof GoalXZ gxz) {
+            return "Going to " + gxz.getX() + ", " + gxz.getZ();
+        }
+        if (goal instanceof GoalNear gn) {
+            var p = gn.getGoalPos();
+            return "Going near " + p.getX() + ", " + p.getY() + ", " + p.getZ();
+        }
+        if (goal instanceof GoalStrictDirection) {
+            return "Tunneling";
+        }
+        if (goal instanceof GoalYLevel gy) {
+            return "Going to Y=" + gy.level;
+        }
+        if (goal instanceof GoalRunAway) {
+            return "Running away";
+        }
+        return "Pathing";
     }
 }

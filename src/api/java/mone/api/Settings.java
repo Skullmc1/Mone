@@ -230,9 +230,20 @@ public final class Settings {
      */
     public final Setting<List<Item>> acceptableThrowawayItems = new Setting<>(new ArrayList<>(Arrays.asList(
             Blocks.DIRT.asItem(),
+            Blocks.COARSE_DIRT.asItem(),
+            Blocks.ROOTED_DIRT.asItem(),
             Blocks.COBBLESTONE.asItem(),
+            Blocks.COBBLED_DEEPSLATE.asItem(),
+            Blocks.DEEPSLATE.asItem(),
+            Blocks.STONE.asItem(),
+            Blocks.ANDESITE.asItem(),
+            Blocks.DIORITE.asItem(),
+            Blocks.GRANITE.asItem(),
+            Blocks.TUFF.asItem(),
             Blocks.NETHERRACK.asItem(),
-            Blocks.STONE.asItem()
+            Blocks.BASALT.asItem(),
+            Blocks.BLACKSTONE.asItem(),
+            Blocks.END_STONE.asItem()
     )));
 
     /**
@@ -1627,6 +1638,71 @@ public final class Settings {
      * Enable the Mone active-work HUD border and status banner (toggled via #hud)
      */
     public final Setting<Boolean> hud = new Setting<>(false);
+
+    /**
+     * Automatically pause pathing to eat food when hunger or health drops below threshold
+     */
+    public final Setting<Boolean> autoEat = new Setting<>(false);
+
+    /**
+     * Hunger level (0-20) at or below which Auto-Eat triggers
+     */
+    public final Setting<Integer> autoEatHungerThreshold = new Setting<>(14);
+
+    /**
+     * Health level (0-20) at or below which Auto-Eat triggers (if hunger is below 20)
+     */
+    public final Setting<Double> autoEatHealthThreshold = new Setting<>(12.0);
+
+    /**
+     * Enable survival safety features (enemy mob evasion, low-health retreat, tool durability protection)
+     */
+    public final Setting<Boolean> survivalSafety = new Setting<>(false);
+
+    /**
+     * Dynamically readjust path to run away from nearby enemy mobs when survivalSafety is enabled
+     */
+    public final Setting<Boolean> evadeEnemyMobs = new Setting<>(true);
+
+    /**
+     * Distance in blocks at which nearby hostile mobs trigger evasion
+     */
+    public final Setting<Double> evadeMobDistance = new Setting<>(10.0);
+
+    /**
+     * Safe distance in blocks to run away to before resuming normal pathing
+     */
+    public final Setting<Double> evadeSafeDistance = new Setting<>(18.0);
+
+    /**
+     * Health level (0-20) at or below which survivalSafety triggers an emergency retreat
+     */
+    public final Setting<Double> lowHealthRetreatThreshold = new Setting<>(8.0);
+
+    /**
+     * Automatically swap in a backup tool before the held tool breaks (at 3 or fewer durability remaining)
+     */
+    public final Setting<Boolean> swapLowDurabilityTool = new Setting<>(true);
+
+    /**
+     * Automatically path to a storage waypoint to deposit items when inventory fills up during mining or farming
+     */
+    public final Setting<Boolean> autoDropOff = new Setting<>(false);
+
+    /**
+     * Waypoint name used by Smart Auto-Drop-Off (e.g. "storage" or "home")
+     */
+    public final Setting<String> autoDropOffWaypoint = new Setting<>("storage");
+
+    /**
+     * Trigger Smart Auto-Drop-Off when free inventory slots drop to or below this number
+     */
+    public final Setting<Integer> autoDropOffMinFreeSlots = new Setting<>(2);
+
+    /**
+     * Keybind to open the in-game Mone Settings GUI (e.g. "K", "O", "RIGHT_SHIFT")
+     */
+    public final Setting<String> settingsGuiKey = new Setting<>("K");
 
     /**
      * A map of lowercase setting field names to their respective setting

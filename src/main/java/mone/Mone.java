@@ -68,6 +68,7 @@ public class Mone implements IMone {
     private final LookBehavior lookBehavior;
     private final InventoryBehavior inventoryBehavior;
     private final InputOverrideHandler inputOverrideHandler;
+    private final QueueBehavior queueBehavior;
 
     private final FollowProcess followProcess;
     private final MineProcess mineProcess;
@@ -77,6 +78,7 @@ public class Mone implements IMone {
     private final ExploreProcess exploreProcess;
     private final FarmProcess farmProcess;
     private final InventoryPauserProcess inventoryPauserProcess;
+    private final AutoDropOffProcess autoDropOffProcess;
     private final IElytraProcess elytraProcess;
 
     private final PathingControlManager pathingControlManager;
@@ -111,6 +113,7 @@ public class Mone implements IMone {
             this.pathingBehavior      = this.registerBehavior(PathingBehavior::new);
             this.inventoryBehavior    = this.registerBehavior(InventoryBehavior::new);
             this.inputOverrideHandler = this.registerBehavior(InputOverrideHandler::new);
+            this.queueBehavior        = this.registerBehavior(QueueBehavior::new);
             this.registerBehavior(WaypointBehavior::new);
         }
 
@@ -124,8 +127,11 @@ public class Mone implements IMone {
             this.exploreProcess          = this.registerProcess(ExploreProcess::new);
             this.farmProcess             = this.registerProcess(FarmProcess::new);
             this.inventoryPauserProcess  = this.registerProcess(InventoryPauserProcess::new);
+            this.autoDropOffProcess      = this.registerProcess(AutoDropOffProcess::new);
             this.elytraProcess           = this.registerProcess(ElytraProcess::create);
             this.registerProcess(BackfillProcess::new);
+            this.registerProcess(AutoEatProcess::new);
+            this.registerProcess(SurvivalSafetyProcess::new);
         }
 
         this.worldProvider = new WorldProvider(this);
@@ -210,6 +216,14 @@ public class Mone implements IMone {
 
     public InventoryPauserProcess getInventoryPauserProcess() {
         return this.inventoryPauserProcess;
+    }
+
+    public QueueBehavior getQueueBehavior() {
+        return this.queueBehavior;
+    }
+
+    public AutoDropOffProcess getAutoDropOffProcess() {
+        return this.autoDropOffProcess;
     }
 
     @Override

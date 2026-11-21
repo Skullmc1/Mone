@@ -172,6 +172,23 @@ public final class MineProcess extends MoneProcessHelper implements IMineProcess
         return "Mine " + filter;
     }
 
+    public String getFriendlySummary() {
+        if (filter == null || filter.blocks().isEmpty()) {
+            return "Mining";
+        }
+        List<String> names = filter.blocks().stream()
+                .map(bom -> bom.getBlock().getName().getString().toLowerCase(java.util.Locale.ROOT))
+                .distinct()
+                .toList();
+        String target = names.size() <= 2
+                ? String.join(", ", names)
+                : (names.get(0) + " +" + (names.size() - 1) + " more");
+        if (desiredQuantity > 0) {
+            return "Mining " + desiredQuantity + " " + target;
+        }
+        return "Mining " + target;
+    }
+
     private PathingCommand updateGoal() {
         BlockOptionalMetaLookup filter = filterFilter();
         if (filter == null) {

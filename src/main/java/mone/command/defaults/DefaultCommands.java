@@ -70,7 +70,10 @@ public final class DefaultCommands {
                 new SelCommand(Mone),
                 new ElytraCommand(Mone),
                 new MapCommand(Mone),
-                new HudCommand(Mone)
+                new HudCommand(Mone),
+                new QueueCommand(Mone),
+                new DropOffCommand(Mone),
+                new GuiCommand(Mone)
         ));
         ExecutionControlCommands prc = new ExecutionControlCommands(Mone);
         commands.add(prc.pauseCommand);

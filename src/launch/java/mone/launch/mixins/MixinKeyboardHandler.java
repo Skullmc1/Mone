@@ -18,6 +18,7 @@
 package mone.launch.mixins;
 
 import mone.utils.MinimapRenderer;
+import mone.utils.SettingsGuiScreen;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
@@ -46,10 +47,14 @@ public class MixinKeyboardHandler {
                 && this.minecraft != null
                 && this.minecraft.player != null
                 && this.minecraft.level != null
-                && this.minecraft.gui.screen() == null
-                && event.key() == MinimapRenderer.resolveFullscreenKeyCode()) {
-            MinimapRenderer.openFullscreenMap();
-            ci.cancel();
+                && this.minecraft.gui.screen() == null) {
+            if (event.key() == MinimapRenderer.resolveFullscreenKeyCode()) {
+                MinimapRenderer.openFullscreenMap();
+                ci.cancel();
+            } else if (event.key() == SettingsGuiScreen.resolveSettingsKeyCode()) {
+                SettingsGuiScreen.open();
+                ci.cancel();
+            }
         }
     }
 }
