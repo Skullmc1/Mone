@@ -38,18 +38,18 @@ public class TunnelCommand extends Command {
     @Override
     public void execute(String label, IArgConsumer args) throws CommandException {
         args.requireMax(3);
-        if (args.hasExactly(3)) {
-            boolean cont = true;
-            int height = Integer.parseInt(args.getArgs().get(0).getValue());
-            int width = Integer.parseInt(args.getArgs().get(1).getValue());
-            int depth = Integer.parseInt(args.getArgs().get(2).getValue());
+        if (args.hasAny()) {
+            args.requireMin(3);
+            int height = args.getAs(Integer.class);
+            int width = args.getAs(Integer.class);
+            int depth = args.getAs(Integer.class);
 
-            if (width < 1 || height < 2 || depth < 1 || height > ctx.world().getMaxY()){
-                logDirect("Width and depth must at least be 1 block; Height must at least be 2 blocks, and cannot be greater than the build limit.");
-                cont = false;
+            if (width < 1 || height < 2 || depth < 1 || (ctx.playerFeet().y + height - 1) > ctx.world().getMaxY()) {
+                logDirect("Width and depth must be at least 1; height must be at least 2 and fit below the build limit.");
+                return;
             }
 
-            if (cont) {
+            if (true) {
                 height--;
                 width--;
                 BlockPos corner1;

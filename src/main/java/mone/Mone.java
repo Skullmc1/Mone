@@ -79,6 +79,9 @@ public class Mone implements IMone {
     private final FarmProcess farmProcess;
     private final InventoryPauserProcess inventoryPauserProcess;
     private final AutoDropOffProcess autoDropOffProcess;
+    private final LumberProcess lumberProcess;
+    private final HighwayProcess highwayProcess;
+    private final AutoFishProcess autoFishProcess;
     private final IElytraProcess elytraProcess;
 
     private final PathingControlManager pathingControlManager;
@@ -128,6 +131,9 @@ public class Mone implements IMone {
             this.farmProcess             = this.registerProcess(FarmProcess::new);
             this.inventoryPauserProcess  = this.registerProcess(InventoryPauserProcess::new);
             this.autoDropOffProcess      = this.registerProcess(AutoDropOffProcess::new);
+            this.lumberProcess           = this.registerProcess(LumberProcess::new);
+            this.highwayProcess          = this.registerProcess(HighwayProcess::new);
+            this.autoFishProcess         = this.registerProcess(AutoFishProcess::new);
             this.elytraProcess           = this.registerProcess(ElytraProcess::create);
             this.registerProcess(BackfillProcess::new);
             this.registerProcess(AutoEatProcess::new);
@@ -224,6 +230,18 @@ public class Mone implements IMone {
 
     public AutoDropOffProcess getAutoDropOffProcess() {
         return this.autoDropOffProcess;
+    }
+
+    public LumberProcess getLumberProcess() {
+        return this.lumberProcess;
+    }
+
+    public HighwayProcess getHighwayProcess() {
+        return this.highwayProcess;
+    }
+
+    public AutoFishProcess getAutoFishProcess() {
+        return this.autoFishProcess;
     }
 
     @Override

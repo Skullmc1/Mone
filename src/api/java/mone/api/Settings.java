@@ -249,8 +249,15 @@ public final class Settings {
     /**
      * Blocks that Mone will attempt to avoid (Used in avoidance)
      */
-    public final Setting<List<Block>> blocksToAvoid = new Setting<>(new ArrayList<>(List.of(
-            Blocks.TRIPWIRE
+    public final Setting<List<Block>> blocksToAvoid = new Setting<>(new ArrayList<>(Arrays.asList(
+            Blocks.TRIPWIRE,
+            Blocks.SCULK_SENSOR,
+            Blocks.CALIBRATED_SCULK_SENSOR,
+            Blocks.SCULK_SHRIEKER,
+            Blocks.POWDER_SNOW,
+            Blocks.POINTED_DRIPSTONE,
+            Blocks.SWEET_BERRY_BUSH,
+            Blocks.WITHER_ROSE
     )));
 
     /**
@@ -263,12 +270,39 @@ public final class Settings {
     /**
      * blocks that Mone shouldn't break, but can if it needs to.
      */
-    public final Setting<List<Block>> blocksToAvoidBreaking = new Setting<>(new ArrayList<>(Arrays.asList( // TODO can this be a HashSet or ImmutableSet?
-            Blocks.CRAFTING_TABLE,
-            Blocks.FURNACE,
-            Blocks.CHEST,
-            Blocks.TRAPPED_CHEST
-    )));
+    public final Setting<List<Block>> blocksToAvoidBreaking = new Setting<>(defaultBlocksToAvoidBreaking());
+
+    private static List<Block> defaultBlocksToAvoidBreaking() {
+        List<Block> list = new ArrayList<>(Arrays.asList(
+                Blocks.CRAFTING_TABLE,
+                Blocks.FURNACE,
+                Blocks.BLAST_FURNACE,
+                Blocks.SMOKER,
+                Blocks.CHEST,
+                Blocks.TRAPPED_CHEST,
+                Blocks.BARREL,
+                Blocks.ENDER_CHEST,
+                Blocks.HOPPER,
+                Blocks.CRAFTER,
+                Blocks.DECORATED_POT,
+                Blocks.CHISELED_BOOKSHELF,
+                Blocks.ENCHANTING_TABLE,
+                Blocks.ANVIL,
+                Blocks.CHIPPED_ANVIL,
+                Blocks.DAMAGED_ANVIL,
+                Blocks.BREWING_STAND,
+                Blocks.BEACON,
+                Blocks.RESPAWN_ANCHOR,
+                Blocks.LODESTONE,
+                Blocks.BUDDING_AMETHYST,
+                Blocks.SPAWNER,
+                Blocks.TRIAL_SPAWNER,
+                Blocks.VAULT,
+                Blocks.SHULKER_BOX
+        ));
+        list.addAll(Blocks.DYED_SHULKER_BOX.asList());
+        return list;
+    }
 
     /**
      * this multiplies the break speed, if set above 1 it's "encourage breaking" instead
@@ -1703,6 +1737,23 @@ public final class Settings {
      * Keybind to open the in-game Mone Settings GUI (e.g. "K", "O", "RIGHT_SHIFT")
      */
     public final Setting<String> settingsGuiKey = new Setting<>("K");
+
+    /**
+     * Keybind to open the Quick Action Radial Menu (e.g. "V", "R", "G")
+     */
+    public final Setting<String> radialMenuKey = new Setting<>("V");
+
+    /**
+     * Comma-separated list of Quick Action Radial slices in "Label|command" format
+     */
+    public final Setting<String> radialActions = new Setting<>(
+            "Pause/Resume|@pause,Stop|@stop,Open Map|@mapfull,Minimap|@minimap,HUD|@hud,Settings|@gui"
+    );
+
+    /**
+     * If enabled, dying during a #queue script automatically paths to the death spot, picks up items, and resumes the script
+     */
+    public final Setting<Boolean> queueRecoverOnDeath = new Setting<>(false);
 
     /**
      * A map of lowercase setting field names to their respective setting

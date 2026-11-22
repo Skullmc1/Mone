@@ -204,6 +204,9 @@ public class MovementDescend extends Movement {
             if (MovementHelper.isBottomSlab(ontoBlock)) {
                 return false; // falling onto a half slab is really glitchy, and can cause more fall damage than we'd expect
             }
+            if (ontoBlock.is(Blocks.POINTED_DRIPSTONE) || ontoBlock.is(Blocks.SLIME_BLOCK)) {
+                return false; // dripstone deals 2x+2 fall damage; slime blocks bounce and break path execution
+            }
             if (reachedMinimum && unprotectedFallHeight <= context.maxFallHeightNoWater + 1) {
                 // fallHeight = 4 means onto.up() is 3 blocks down, which is the max
                 res.x = destX;

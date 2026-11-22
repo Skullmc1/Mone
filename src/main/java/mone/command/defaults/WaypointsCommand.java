@@ -248,6 +248,16 @@ public class WaypointsCommand extends Command {
                                     waypoint.getCreationTimestamp()
                             )
                     )));
+                    MutableComponent gotoComponent = Component.literal("Click to go to this waypoint");
+                    gotoComponent.setStyle(gotoComponent.getStyle().withClickEvent(new ClickEvent.RunCommand(
+                            String.format(
+                                    "%s%s goto %s @ %d",
+                                    FORCE_COMMAND_PREFIX,
+                                    label,
+                                    waypoint.getTag().getName(),
+                                    waypoint.getCreationTimestamp()
+                            )
+                    )));
                     MutableComponent goalComponent = Component.literal("Click to set goal to this waypoint");
                     goalComponent.setStyle(goalComponent.getStyle().withClickEvent(new ClickEvent.RunCommand(
                             String.format(
@@ -279,8 +289,9 @@ public class WaypointsCommand extends Command {
                                     label
                             )
                     )));
-                    logDirect(deleteComponent);
+                    logDirect(gotoComponent);
                     logDirect(goalComponent);
+                    logDirect(deleteComponent);
                     logDirect(recreateComponent);
                     logDirect(backComponent);
                 } else if (action == Action.DELETE) {

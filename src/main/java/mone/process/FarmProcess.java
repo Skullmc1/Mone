@@ -66,7 +66,7 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
 
     private boolean active;
 
-    private List<BlockPos> locations;
+    private volatile List<BlockPos> locations;
     private int tickCount;
 
     private int range;
@@ -78,7 +78,9 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
             Items.WHEAT_SEEDS,
             Items.PUMPKIN_SEEDS,
             Items.POTATO,
-            Items.CARROT
+            Items.CARROT,
+            Items.TORCHFLOWER_SEEDS,
+            Items.PITCHER_POD
     );
 
     private static final List<Item> PICKUP_DROPPED = Arrays.asList(
@@ -97,7 +99,13 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
             Items.COCOA_BEANS,
             Blocks.SUGAR_CANE.asItem(),
             Blocks.BAMBOO.asItem(),
-            Blocks.CACTUS.asItem()
+            Blocks.CACTUS.asItem(),
+            Items.TORCHFLOWER_SEEDS,
+            Blocks.TORCHFLOWER.asItem(),
+            Items.PITCHER_POD,
+            Blocks.PITCHER_PLANT.asItem(),
+            Items.SWEET_BERRIES,
+            Items.GLOW_BERRIES
     );
 
     public FarmProcess(Mone Mone) {
@@ -130,11 +138,14 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
         MELON(Blocks.MELON, state -> true),
         NETHERWART(Blocks.NETHER_WART, state -> state.getValue(NetherWartBlock.AGE) >= 3),
         COCOA(Blocks.COCOA, state -> state.getValue(CocoaBlock.AGE) >= 2),
+        TORCHFLOWER(Blocks.TORCHFLOWER, state -> true),
+        PITCHER(Blocks.PITCHER_CROP, state -> state.getValue(net.minecraft.world.level.block.PitcherCropBlock.AGE) >= 4),
         SUGARCANE(Blocks.SUGAR_CANE, null) {
             @Override
             public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
                 if (MoneAPI.getSettings().replantCrops.value) {
-                    return world.getBlockState(pos.below()).getBlock() instanceof SugarCaneBlock;
+                    return world.getBlockState(pos.below()).getBlock() instanceof SugarCaneBlock
+                            && !(world.getBlockState(pos.below(2)).getBlock() instanceof SugarCaneBlock);
                 }
                 return true;
             }
@@ -143,7 +154,8 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
             @Override
             public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
                 if (MoneAPI.getSettings().replantCrops.value) {
-                    return world.getBlockState(pos.below()).getBlock() instanceof BambooStalkBlock;
+                    return world.getBlockState(pos.below()).getBlock() instanceof BambooStalkBlock
+                            && !(world.getBlockState(pos.below(2)).getBlock() instanceof BambooStalkBlock);
                 }
                 return true;
             }
@@ -152,7 +164,8 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
             @Override
             public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
                 if (MoneAPI.getSettings().replantCrops.value) {
-                    return world.getBlockState(pos.below()).getBlock() instanceof CactusBlock;
+                    return world.getBlockState(pos.below()).getBlock() instanceof CactusBlock
+                            && !(world.getBlockState(pos.below(2)).getBlock() instanceof CactusBlock);
                 }
                 return true;
             }
@@ -210,6 +223,9 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
             if (MoneAPI.getSettings().replantCrops.value) {
                 scan.add(Blocks.FARMLAND);
                 scan.add(Blocks.JUNGLE_LOG);
+                scan.add(Blocks.STRIPPED_JUNGLE_LOG);
+                scan.add(Blocks.JUNGLE_WOOD);
+                scan.add(Blocks.STRIPPED_JUNGLE_WOOD);
                 if (MoneAPI.getSettings().replantNetherWart.value) {
                     scan.add(Blocks.SOUL_SAND);
                 }
@@ -245,7 +261,8 @@ public final class FarmProcess extends MoneProcessHelper implements IFarmProcess
                 }
                 continue;
             }
-            if (state.getBlock() == Blocks.JUNGLE_LOG) {
+            Block blk = state.getBlock();
+            if (blk == Blocks.JUNGLE_LOG || blk == Blocks.STRIPPED_JUNGLE_LOG || blk == Blocks.JUNGLE_WOOD || blk == Blocks.STRIPPED_JUNGLE_WOOD) {
                 for (Direction direction : Direction.Plane.HORIZONTAL) {
                     if (ctx.world().getBlockState(pos.relative(direction)).getBlock() instanceof AirBlock) {
                         openLog.add(pos);

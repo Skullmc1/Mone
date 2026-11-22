@@ -36,12 +36,28 @@ public class VersionCommand extends Command {
     @Override
     public void execute(String label, IArgConsumer args) throws CommandException {
         args.requireMax(0);
-        String version = getClass().getPackage().getImplementationVersion();
-        if (version == null) {
-            throw new CommandInvalidStateException("Null version (this is normal in a dev environment)");
-        } else {
-            logDirect(String.format("You are running Mone v%s", version));
+        String version = resolveModVersion();
+        logDirect(String.format("You are running Mone v%s", version));
+    }
+
+    private String resolveModVersion() {
+        try {
+            Class<?> loaderClass = Class.forName("net.fabricmc.loader.api.FabricLoader");
+            Object loader = loaderClass.getMethod("getInstance").invoke(null);
+            Object optContainer = loaderClass.getMethod("getModContainer", String.class).invoke(loader, "mone");
+            if (optContainer instanceof java.util.Optional<?> opt && opt.isPresent()) {
+                Object container = opt.get();
+                Object metadata = container.getClass().getMethod("getMetadata").invoke(container);
+                Object ver = metadata.getClass().getMethod("getVersion").invoke(metadata);
+                Object friendly = ver.getClass().getMethod("getFriendlyString").invoke(ver);
+                if (friendly != null && !friendly.toString().isBlank()) {
+                    return friendly.toString();
+                }
+            }
+        } catch (Throwable ignored) {
         }
+        String impl = getClass().getPackage().getImplementationVersion();
+        return (impl != null && !impl.isBlank()) ? impl : "dev";
     }
 
     @Override

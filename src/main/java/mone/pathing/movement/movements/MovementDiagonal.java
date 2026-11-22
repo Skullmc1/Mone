@@ -167,7 +167,7 @@ public class MovementDiagonal extends Movement {
             return;
         }
         BlockState cuttingOver2 = context.get(destX, y - 1, z);
-        if ((!context.allowWalkOnMagmaBlocks && cuttingOver1.is(Blocks.MAGMA_BLOCK)) || MovementHelper.isLava(cuttingOver2)) {
+        if ((!context.allowWalkOnMagmaBlocks && cuttingOver2.is(Blocks.MAGMA_BLOCK)) || MovementHelper.isLava(cuttingOver2)) {
             return;
         }
         boolean water = false;
@@ -317,8 +317,8 @@ public class MovementDiagonal extends Movement {
 
     @Override
     public List<BlockPos> toWalkInto(BlockStateInterface bsi) {
-        if (toWalkIntoCached == null) {
-            toWalkIntoCached = new ArrayList<>();
+        if (toWalkIntoCached != null) {
+            return toWalkIntoCached;
         }
         List<BlockPos> result = new ArrayList<>();
         for (int i = 0; i < 4; i++) {

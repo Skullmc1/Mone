@@ -131,7 +131,10 @@ public final class GetToBlockProcess extends MoneProcessHelper implements IGetTo
     // blacklist the closest block and its adjacent blocks
     public synchronized boolean blacklistClosest() {
         List<BlockPos> newBlacklist = new ArrayList<>();
-        knownLocations.stream().min(Comparator.comparingDouble(ctx.playerFeet()::distSqr)).ifPresent(newBlacklist::add);
+        knownLocations.stream().min(Comparator.comparingDouble(ctx.playerFeet()::distSqr)).ifPresent(p -> {
+            newBlacklist.add(p);
+            knownLocations.remove(p);
+        });
         outer:
         while (true) {
             for (BlockPos known : knownLocations) {
@@ -217,7 +220,6 @@ public final class GetToBlockProcess extends MoneProcessHelper implements IGetTo
                 Mone.getLookBehavior().updateTarget(reachable.get(), true);
                 if (knownLocations.contains(ctx.getSelectedBlock().orElse(null))) {
                     Mone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true); // TODO find some way to right click even if we're in an ESC menu
-                    System.out.println(ctx.player().containerMenu);
                     if (!(ctx.player().containerMenu instanceof InventoryMenu)) {
                         return true;
                     }
@@ -244,14 +246,21 @@ public final class GetToBlockProcess extends MoneProcessHelper implements IGetTo
         if (!MoneAPI.getSettings().rightClickContainerOnArrival.value) {
             return false;
         }
-        return block == Blocks.CRAFTING_TABLE || block == Blocks.FURNACE || block == Blocks.BLAST_FURNACE || block == Blocks.ENDER_CHEST || block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST;
+        return block == Blocks.CRAFTING_TABLE || block == Blocks.FURNACE || block == Blocks.BLAST_FURNACE
+                || block == Blocks.SMOKER || block == Blocks.ENDER_CHEST || block == Blocks.CHEST
+                || block == Blocks.TRAPPED_CHEST || block == Blocks.BARREL || block == Blocks.CRAFTER
+                || block == Blocks.SMITHING_TABLE || block == Blocks.STONECUTTER || block == Blocks.GRINDSTONE
+                || block == Blocks.LOOM || block == Blocks.CARTOGRAPHY_TABLE || block == Blocks.ENCHANTING_TABLE
+                || block == Blocks.BREWING_STAND || block instanceof net.minecraft.world.level.block.ShulkerBoxBlock
+                || block instanceof net.minecraft.world.level.block.AnvilBlock;
     }
 
     private boolean blockOnTopMustBeRemoved(Block block) {
         if (!rightClickOnArrival(block)) { // only if we plan to actually open it on arrival
             return false;
         }
-        // only these chests; you can open a crafting table or furnace even with a block on top
-        return block == Blocks.ENDER_CHEST || block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST;
+        // chests and shulker boxes need space above to open
+        return block == Blocks.ENDER_CHEST || block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST
+                || block instanceof net.minecraft.world.level.block.ShulkerBoxBlock;
     }
 }

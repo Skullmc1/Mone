@@ -45,8 +45,13 @@ public class MineCommand extends Command {
             boms.add(args.getDatatypeFor(ForBlockOptionalMeta.INSTANCE));
         }
         MoneAPI.getProvider().getWorldScanner().repack(ctx);
-        logDirect(String.format("Mining %s", boms.toString()));
-        Mone.getMineProcess().mine(quantity, boms.toArray(new BlockOptionalMeta[0]));
+        BlockOptionalMeta[] arr = boms.toArray(new BlockOptionalMeta[0]);
+        String pretty = java.util.Arrays.stream(arr)
+                .map(b -> b.getBlock().getName().getString().toLowerCase(java.util.Locale.ROOT))
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(", "));
+        logDirect(quantity > 0 ? ("Mining " + quantity + " " + pretty) : ("Mining " + pretty));
+        Mone.getMineProcess().mine(quantity, arr);
     }
 
     @Override

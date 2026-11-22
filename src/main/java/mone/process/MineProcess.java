@@ -53,13 +53,15 @@ import static mone.api.pathing.movement.ActionCosts.COST_INF;
 public final class MineProcess extends MoneProcessHelper implements IMineProcess {
 
     private BlockOptionalMetaLookup filter;
-    private List<BlockPos> knownOreLocations;
+    private volatile List<BlockPos> knownOreLocations;
     private List<BlockPos> blacklist; // inaccessible
     private Map<BlockPos, Long> anticipatedDrops;
     private BlockPos branchPoint;
     private GoalRunAway branchPointRunaway;
     private int desiredQuantity;
     private int tickCount;
+    private BlockPos lastNearbyScanPos;
+    private int lastNearbyScanTick;
 
     public MineProcess(Mone Mone) {
         super(Mone);
@@ -414,14 +416,20 @@ public final class MineProcess extends MoneProcessHelper implements IMineProcess
         List<BlockPos> dropped = droppedItemsScan();
         knownOreLocations.addAll(dropped);
         BlockPos playerFeet = ctx.playerFeet();
-        BlockStateInterface bsi = new BlockStateInterface(ctx);
-
 
         BlockOptionalMetaLookup filter = filterFilter();
         if (filter == null) {
             return false;
         }
 
+        // Throttle the 21x21x21 cube scan to avoid scanning 9,261 blocks every single tick when stationary
+        if (playerFeet.equals(lastNearbyScanPos) && (tickCount - lastNearbyScanTick) < 10) {
+            return true;
+        }
+        lastNearbyScanPos = playerFeet;
+        lastNearbyScanTick = tickCount;
+
+        BlockStateInterface bsi = new BlockStateInterface(ctx);
         int searchDist = 10;
         double fakedBlockReachDistance = 20; // at least 10 * sqrt(3) with some extra space to account for positioning within the block
         for (int x = playerFeet.getX() - searchDist; x <= playerFeet.getX() + searchDist; x++) {

@@ -73,7 +73,11 @@ public final class DefaultCommands {
                 new HudCommand(Mone),
                 new QueueCommand(Mone),
                 new DropOffCommand(Mone),
-                new GuiCommand(Mone)
+                new GuiCommand(Mone),
+                new LumberCommand(Mone),
+                new HighwayCommand(Mone),
+                new FishCommand(Mone),
+                new LogoutCommand(Mone)
         ));
         ExecutionControlCommands prc = new ExecutionControlCommands(Mone);
         commands.add(prc.pauseCommand);

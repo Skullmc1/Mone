@@ -26,6 +26,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.ContainerInput;
@@ -127,7 +128,10 @@ public final class InventoryBehavior extends Behavior implements Helper {
         return true;
     }
 
-    private int firstValidThrowaway() { // TODO offhand idk
+    private int firstValidThrowaway() {
+        if (MoneAPI.getSettings().acceptableThrowawayItems.value.contains(ctx.player().getItemBySlot(EquipmentSlot.OFFHAND).getItem())) {
+            return -1;
+        }
         NonNullList<ItemStack> invy = ctx.player().getInventory().getNonEquipmentItems();
         for (int i = 0; i < invy.size(); i++) {
             if (MoneAPI.getSettings().acceptableThrowawayItems.value.contains(invy.get(i).getItem())) {
@@ -214,7 +218,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
             // so not a shovel, not a hoe, not a block, etc
             for (int i = 0; i < 9; i++) {
                 ItemStack item = inv.get(i);
-                if (item.isEmpty() || item.getItem().components().has(DataComponents.TOOL)) {
+                if (item.isEmpty() || item.is(ItemTags.PICKAXES) || item.is(ItemTags.SWORDS)) {
                     if (select) {
                         p.getInventory().setSelectedSlot(i);
                     }

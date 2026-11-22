@@ -22,8 +22,8 @@ import mone.Mone;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
@@ -60,20 +60,6 @@ public class ToolSet {
 
     private final LocalPlayer player;
 
-    /**
-     * Used for evaluating the material cost of a tool.
-     * see {@link #getMaterialCost(ItemStack)}
-     * Prefer tools with lower material cost (lower index in this list).
-     */
-    private static final List<TagKey<Item>> materialTagsPriorityList = List.of(
-        ItemTags.WOODEN_TOOL_MATERIALS,
-        ItemTags.STONE_TOOL_MATERIALS,
-        ItemTags.IRON_TOOL_MATERIALS,
-        ItemTags.GOLD_TOOL_MATERIALS,
-        ItemTags.DIAMOND_TOOL_MATERIALS,
-        ItemTags.NETHERITE_TOOL_MATERIALS
-    );
-
     public ToolSet(LocalPlayer player) {
         breakStrengthCache = new HashMap<>();
         this.player = player;
@@ -99,17 +85,27 @@ public class ToolSet {
 
     /**
      * Evaluate the material cost of a possible tool.
-     * If all else is equal, we want to prefer the tool with the lowest material cost.
-     * i.e. we want to prefer a wooden pickaxe over a stone pickaxe, if all else is equal.
+     * If all else is equal, we want to prefer empty hands / non-tools (0), then cheaper tool tiers
+     * (wooden = 1, stone = 2, copper = 3, iron = 4, gold = 5, diamond = 6, netherite = 7).
      * @param itemStack a possibly empty ItemStack
      * @return values from 0 up
      */
     private int getMaterialCost(ItemStack itemStack) {
-        for (int i = 0; i < materialTagsPriorityList.size(); i++) {
-            final TagKey<Item> tag = materialTagsPriorityList.get(i);
-            if (itemStack.is(tag)) return i;
+        if (itemStack.isEmpty()) {
+            return 0;
         }
-        return -1;
+        if (!itemStack.getItem().components().has(DataComponents.TOOL) && !itemStack.is(ItemTags.SWORDS)) {
+            return 0;
+        }
+        String path = BuiltInRegistries.ITEM.getKey(itemStack.getItem()).getPath();
+        if (path.startsWith("wooden_")) return 1;
+        if (path.startsWith("stone_")) return 2;
+        if (path.startsWith("copper_")) return 3;
+        if (path.startsWith("iron_")) return 4;
+        if (path.startsWith("golden_")) return 5;
+        if (path.startsWith("diamond_")) return 6;
+        if (path.startsWith("netherite_")) return 7;
+        return 4;
     }
 
     public boolean hasSilkTouch(ItemStack stack) {
@@ -148,12 +144,12 @@ public class ToolSet {
 
         int best = 0;
         double highestSpeed = Double.NEGATIVE_INFINITY;
-        int lowestCost = Integer.MIN_VALUE;
+        int lowestCost = Integer.MAX_VALUE;
         boolean bestSilkTouch = false;
         BlockState blockState = b.defaultBlockState();
         for (int i = 0; i < 9; i++) {
             ItemStack itemStack = player.getInventory().getItem(i);
-            if (!MoneAPI.getSettings().useSwordToMine.value && itemStack.getItem().components().has(DataComponents.WEAPON)) {
+            if (!MoneAPI.getSettings().useSwordToMine.value && itemStack.is(ItemTags.SWORDS)) {
                 continue;
             }
 

@@ -76,6 +76,13 @@ public final class CachedWorld implements ICachedWorld, Helper {
 
     private final ResourceKey<Level> dimensionId;
 
+    private static final java.util.concurrent.ScheduledExecutorService AUTOSAVE_SCHEDULER =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "Mone-Cache-Autosave");
+                t.setDaemon(true);
+                return t;
+            });
+
     CachedWorld(Path directory, DimensionType dimension, ResourceKey<Level> dimensionId) {
         if (!Files.exists(directory)) {
             try {
@@ -86,22 +93,17 @@ public final class CachedWorld implements ICachedWorld, Helper {
         this.directory = directory.toString();
         this.dimension = dimension;
         this.dimensionId = dimensionId;
-        System.out.println("Cached world directory: " + directory);
         Mone.getExecutor().execute(new PackerThread());
-        Mone.getExecutor().execute(() -> {
-            try {
-                Thread.sleep(30000);
-                while (true) {
-                    // since a region only saves if it's been modified since its last save
-                    // saving every 10 minutes means that once it's time to exit
-                    // we'll only have a couple regions to save
-                    save();
-                    Thread.sleep(600000);
+        java.lang.ref.WeakReference<CachedWorld> ref = new java.lang.ref.WeakReference<>(this);
+        AUTOSAVE_SCHEDULER.scheduleWithFixedDelay(() -> {
+            CachedWorld world = ref.get();
+            if (world != null) {
+                try {
+                    world.save();
+                } catch (Throwable ignored) {
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
-        });
+        }, 30, 600, java.util.concurrent.TimeUnit.SECONDS);
     }
 
     @Override
@@ -163,7 +165,6 @@ public final class CachedWorld implements ICachedWorld, Helper {
     @Override
     public final void save() {
         if (!MoneAPI.getSettings().chunkCaching.value) {
-            System.out.println("Not saving to disk; chunk caching is disabled.");
             allRegions().forEach(region -> {
                 if (region != null) {
                     region.removeExpired();
@@ -172,14 +173,11 @@ public final class CachedWorld implements ICachedWorld, Helper {
             prune();
             return;
         }
-        long start = System.nanoTime() / 1000000L;
         allRegions().parallelStream().forEach(region -> {
             if (region != null) {
                 region.save(this.directory);
             }
         });
-        long now = System.nanoTime() / 1000000L;
-        System.out.println("World save took " + (now - start) + "ms");
         prune();
     }
 
@@ -240,14 +238,11 @@ public final class CachedWorld implements ICachedWorld, Helper {
 
     @Override
     public final void reloadAllFromDisk() {
-        long start = System.nanoTime() / 1000000L;
         allRegions().forEach(region -> {
             if (region != null) {
                 region.load(this.directory);
             }
         });
-        long now = System.nanoTime() / 1000000L;
-        System.out.println("World load took " + (now - start) + "ms");
     }
 
     @Override
@@ -316,7 +311,7 @@ public final class CachedWorld implements ICachedWorld, Helper {
                     CachedWorld.this.updateCachedChunk(cached);
                     //System.out.println("Processed chunk at " + chunk.x + "," + chunk.z);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
                     break;
                 } catch (Throwable th) {
                     // in the case of an exception, keep consuming from the queue so as not to leak memory

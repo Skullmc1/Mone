@@ -312,14 +312,14 @@ public class FullscreenMapScreen extends Screen implements Helper {
             renderWaypointsSidebar(guiGraphics, mone, px, pz, mouseX, mouseY);
         }
 
-        // Header bar
-        guiGraphics.fill(0, 0, this.width, HEADER_H, 0xDD10101A);
-        guiGraphics.fill(0, HEADER_H - 1, this.width, HEADER_H, 0xFF3E3E55);
+        // Header bar (Black base + Orange accents)
+        guiGraphics.fill(0, 0, this.width, HEADER_H, 0xEB0B0B0D);
+        guiGraphics.fill(0, HEADER_H - 1, this.width, HEADER_H, 0xFFEA5B1C);
 
         // Waypoints toggle button in header
         boolean hoverWpBtn = mouseX >= 6 && mouseX < 74 && mouseY >= 3 && mouseY < 19;
-        guiGraphics.fill(6, 3, 74, 19, sidebarOpen ? 0xFF285C52 : (hoverWpBtn ? 0xFF33334A : 0xFF202030));
-        guiGraphics.outline(6, 3, 68, 16, sidebarOpen ? 0xFF38E8D4 : 0xFF555570);
+        guiGraphics.fill(6, 3, 74, 19, sidebarOpen ? 0xFFCC4A14 : (hoverWpBtn ? 0xFF24242B : 0xFF16161B));
+        guiGraphics.outline(6, 3, 68, 16, sidebarOpen ? 0xFFFF9B42 : 0xFF44444E);
         guiGraphics.centeredText(this.font, "Waypoints", 40, 7, 0xFFFFFFFF);
 
         String modeText = switch (activeMode) {
@@ -330,19 +330,19 @@ public class FullscreenMapScreen extends Screen implements Helper {
         String flags = (settings.minimapChunkGrid.value ? " [Grid]" : "")
                 + (settings.minimapSpawnOverlay.value ? " [Spawns]" : "");
         guiGraphics.text(this.font, modeText + "  |  " + String.format(Locale.ROOT, "%.1fx", ppb) + flags,
-                82, 7, 0xFFDDDDDD, true);
+                82, 7, 0xFFE5E5E8, true);
 
         // Hovered world coordinates + Nether/Overworld linked coordinates
         int hoverWorldX = Mth.floor(camX + (mouseX - viewCenterX) / ppb);
         int hoverWorldZ = Mth.floor(camZ + (mouseY - viewCenterY) / ppb);
         String linked = formatLinkedCoords(level, hoverWorldX, hoverWorldZ);
         String coordStr = "X " + hoverWorldX + ", Z " + hoverWorldZ + linked;
-        guiGraphics.text(this.font, coordStr, this.width - this.font.width(coordStr) - 8, 7, 0xFF4AEDD9, true);
+        guiGraphics.text(this.font, coordStr, this.width - this.font.width(coordStr) - 8, 7, 0xFFFF8833, true);
 
         // Footer bar with controls
         int footerY = this.height - FOOTER_H;
-        guiGraphics.fill(0, footerY, this.width, this.height, 0xDD10101A);
-        guiGraphics.fill(0, footerY, this.width, footerY + 1, 0xFF3E3E55);
+        guiGraphics.fill(0, footerY, this.width, this.height, 0xEB0B0B0D);
+        guiGraphics.fill(0, footerY, this.width, footerY + 1, 0xFF2E2E36);
         String keyLabel = settings.minimapFullscreenKey.value == null ? "M" : settings.minimapFullscreenKey.value.toUpperCase(Locale.ROOT);
         String hint = "Drag: Pan | Ctrl+Drag: #sel | Scroll: Zoom | L-Click: Goto | R-Click: Waypoint/Menu | W: Search | G: Grid | L: Spawns | " + keyLabel + "/Esc: Close";
         guiGraphics.centeredText(this.font, hint, this.width / 2, footerY + 8, 0xFFCCCCCC);
@@ -391,8 +391,8 @@ public class FullscreenMapScreen extends Screen implements Helper {
                 int z0 = (int) Math.round(viewCenterY + (min.z - camZ) * ppb);
                 int x1 = (int) Math.round(viewCenterX + (max.x + 1 - camX) * ppb);
                 int z1 = (int) Math.round(viewCenterY + (max.z + 1 - camZ) * ppb);
-                guiGraphics.fill(x0, z0, x1, z1, 0x3338E8D4);
-                guiGraphics.outline(x0, z0, Math.max(1, x1 - x0), Math.max(1, z1 - z0), 0xCC38E8D4);
+                guiGraphics.fill(x0, z0, x1, z1, 0x33FF6A2B);
+                guiGraphics.outline(x0, z0, Math.max(1, x1 - x0), Math.max(1, z1 - z0), 0xCCFF7A29);
             }
         }
 
@@ -405,26 +405,26 @@ public class FullscreenMapScreen extends Screen implements Helper {
             int z0 = (int) Math.round(viewCenterY + (minZ - camZ) * ppb);
             int x1 = (int) Math.round(viewCenterX + (maxX + 1 - camX) * ppb);
             int z1 = (int) Math.round(viewCenterY + (maxZ + 1 - camZ) * ppb);
-            guiGraphics.fill(x0, z0, x1, z1, 0x444AEDD9);
-            guiGraphics.outline(x0, z0, Math.max(1, x1 - x0), Math.max(1, z1 - z0), 0xFF4AEDD9);
+            guiGraphics.fill(x0, z0, x1, z1, 0x44FF6A2B);
+            guiGraphics.outline(x0, z0, Math.max(1, x1 - x0), Math.max(1, z1 - z0), 0xFFFF8833);
             String dim = (maxX - minX + 1) + " x " + (maxZ - minZ + 1);
-            guiGraphics.centeredText(this.font, dim, (x0 + x1) / 2, z0 - 11, 0xFF4AEDD9);
+            guiGraphics.centeredText(this.font, dim, (x0 + x1) / 2, z0 - 11, 0xFFFF9B42);
         }
     }
 
     private void renderWaypointsSidebar(GuiGraphicsExtractor guiGraphics, IMone mone, double px, double pz, int mouseX, int mouseY) {
         int topY = HEADER_H;
         int bottomY = this.height - FOOTER_H;
-        guiGraphics.fill(0, topY, SIDEBAR_W, bottomY, 0xEB11111B);
-        guiGraphics.fill(SIDEBAR_W - 1, topY, SIDEBAR_W, bottomY, 0xFF3E3E55);
+        guiGraphics.fill(0, topY, SIDEBAR_W, bottomY, 0xF20B0B0D);
+        guiGraphics.fill(SIDEBAR_W - 1, topY, SIDEBAR_W, bottomY, 0xFF2E2E36);
 
         // Search box
         int sbX = 6;
         int sbY = topY + 6;
         int sbW = SIDEBAR_W - 12;
         int sbH = 16;
-        guiGraphics.fill(sbX, sbY, sbX + sbW, sbY + sbH, 0xFF0A0A12);
-        guiGraphics.outline(sbX, sbY, sbW, sbH, searchFocused ? 0xFF38E8D4 : 0xFF4A4A64);
+        guiGraphics.fill(sbX, sbY, sbX + sbW, sbY + sbH, 0xFF060608);
+        guiGraphics.outline(sbX, sbY, sbW, sbH, searchFocused ? 0xFFFF7A29 : 0xFF33333C);
 
         String query = searchInput.toString();
         boolean showCursor = searchFocused && (((System.currentTimeMillis() / 500L) & 1L) == 0L);
@@ -489,24 +489,24 @@ public class FullscreenMapScreen extends Screen implements Helper {
             int delX = SIDEBAR_W - 16;
             boolean hoverGo = mouseX >= goX && mouseX < goX + 16 && mouseY >= rowY + 3 && mouseY < rowY + 15;
             boolean hoverDel = mouseX >= delX && mouseX < delX + 12 && mouseY >= rowY + 3 && mouseY < rowY + 15;
-            guiGraphics.fill(goX, rowY + 3, goX + 16, rowY + 15, hoverGo ? 0xFF2B7A58 : 0xFF1D4A38);
+            guiGraphics.fill(goX, rowY + 3, goX + 16, rowY + 15, hoverGo ? 0xFFEA5B1C : 0xFF9E3616);
             guiGraphics.centeredText(this.font, "Go", goX + 8, rowY + 5, 0xFFFFFFFF);
-            guiGraphics.fill(delX, rowY + 3, delX + 12, rowY + 15, hoverDel ? 0xFF992A2A : 0xFF5A1D1D);
+            guiGraphics.fill(delX, rowY + 3, delX + 12, rowY + 15, hoverDel ? 0xFFA82424 : 0xFF661A1A);
             guiGraphics.centeredText(this.font, "X", delX + 6, rowY + 5, 0xFFFFAAAA);
         }
     }
 
     private void renderContextMenu(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         int menuH = MENU_ITEMS.length * MENU_ROW_H + 4;
-        guiGraphics.fill(contextMenuX, contextMenuY, contextMenuX + MENU_W, contextMenuY + menuH, 0xF0141422);
-        guiGraphics.outline(contextMenuX, contextMenuY, MENU_W, menuH, 0xFF6A6A88);
+        guiGraphics.fill(contextMenuX, contextMenuY, contextMenuX + MENU_W, contextMenuY + menuH, 0xF50B0B0D);
+        guiGraphics.outline(contextMenuX, contextMenuY, MENU_W, menuH, 0xFFFF7A29);
 
         for (int i = 0; i < MENU_ITEMS.length; i++) {
             int rowY = contextMenuY + 2 + i * MENU_ROW_H;
             boolean hovered = mouseX >= contextMenuX + 1 && mouseX < contextMenuX + MENU_W - 1
                     && mouseY >= rowY && mouseY < rowY + MENU_ROW_H;
             if (hovered) {
-                int hoverBg = (i == 2) ? 0xCC7A2222 : 0xCC2E3654;
+                int hoverBg = (i == 2) ? 0xCC7A2222 : 0xCC993810;
                 guiGraphics.fill(contextMenuX + 1, rowY, contextMenuX + MENU_W - 1, rowY + MENU_ROW_H, hoverBg);
             }
             int textColor = (i == 2) ? 0xFFFF6666 : 0xFFFFFFFF;
@@ -515,20 +515,20 @@ public class FullscreenMapScreen extends Screen implements Helper {
     }
 
     private void renderNameDialog(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.fill(0, 0, this.width, this.height, 0x66000000);
+        guiGraphics.fill(0, 0, this.width, this.height, 0x77000000);
 
         int dx = (this.width - DIALOG_W) / 2;
         int dy = (this.height - DIALOG_H) / 2;
 
-        guiGraphics.fill(dx, dy, dx + DIALOG_W, dy + DIALOG_H, 0xF5141422);
-        guiGraphics.outline(dx, dy, DIALOG_W, DIALOG_H, 0xFF6A6A88);
+        guiGraphics.fill(dx, dy, dx + DIALOG_W, dy + DIALOG_H, 0xF50B0B0D);
+        guiGraphics.outline(dx, dy, DIALOG_W, DIALOG_H, 0xFFFF7A29);
 
         String title = (renamingWaypoint != null) ? "Rename Waypoint" : "Name Waypoint";
-        guiGraphics.text(this.font, title, dx + 8, dy + 7, 0xFFFFFFFF, true);
+        guiGraphics.text(this.font, title, dx + 8, dy + 7, 0xFFFF7A29, true);
 
         if (pendingWaypointPos != null) {
             String posText = pendingWaypointPos.x + ", " + pendingWaypointPos.y + ", " + pendingWaypointPos.z;
-            guiGraphics.text(this.font, posText, dx + DIALOG_W - this.font.width(posText) - 8, dy + 7, 0xFF99AABB, true);
+            guiGraphics.text(this.font, posText, dx + DIALOG_W - this.font.width(posText) - 8, dy + 7, 0xFFAAAAAA, true);
         }
 
         // Text input box
@@ -536,14 +536,14 @@ public class FullscreenMapScreen extends Screen implements Helper {
         int boxY = dy + 22;
         int boxW = DIALOG_W - 16;
         int boxH = 18;
-        guiGraphics.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0xFF0A0A12);
+        guiGraphics.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0xFF060608);
         guiGraphics.outline(boxX, boxY, boxW, boxH, selectedColor);
 
         String displayText = nameInput.toString();
         boolean showCursor = ((System.currentTimeMillis() / 500L) & 1L) == 0L;
         if (displayText.isEmpty()) {
             guiGraphics.text(this.font, showCursor ? "|" : "Enter name...", boxX + 5, boxY + 5,
-                    showCursor ? 0xFFFFFFFF : 0xFF666677, false);
+                    showCursor ? 0xFFFFFFFF : 0xFF666670, false);
         } else {
             guiGraphics.text(this.font, displayText + (showCursor ? "|" : ""), boxX + 5, boxY + 5, 0xFFFFFFFF, true);
         }
@@ -558,7 +558,7 @@ public class FullscreenMapScreen extends Screen implements Helper {
             int c = COLOR_PALETTE[i];
             boolean isSel = (c & 0xFFFFFF) == (selectedColor & 0xFFFFFF);
             guiGraphics.fill(sx, swatchY, sx + swatchSize, swatchY + swatchSize, c);
-            guiGraphics.outline(sx - 1, swatchY - 1, swatchSize + 2, swatchSize + 2, isSel ? 0xFFFFFFFF : 0xFF333344);
+            guiGraphics.outline(sx - 1, swatchY - 1, swatchSize + 2, swatchSize + 2, isSel ? 0xFFFFFFFF : 0xFF2A2A32);
         }
 
         // Save & Cancel buttons
@@ -571,12 +571,12 @@ public class FullscreenMapScreen extends Screen implements Helper {
         boolean hoverSave = mouseX >= saveX && mouseX < saveX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
         boolean hoverCancel = mouseX >= cancelX && mouseX < cancelX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
 
-        guiGraphics.fill(saveX, btnY, saveX + btnW, btnY + btnH, hoverSave ? 0xFF2B7A58 : 0xFF1F5C42);
-        guiGraphics.outline(saveX, btnY, btnW, btnH, 0xFF4AEDD9);
+        guiGraphics.fill(saveX, btnY, saveX + btnW, btnY + btnH, hoverSave ? 0xFFFF7A29 : 0xFFCC4A14);
+        guiGraphics.outline(saveX, btnY, btnW, btnH, 0xFFFF9B42);
         guiGraphics.centeredText(this.font, "Save", saveX + btnW / 2, btnY + 5, 0xFFFFFFFF);
 
-        guiGraphics.fill(cancelX, btnY, cancelX + btnW, btnY + btnH, hoverCancel ? 0xFF4A4A5E : 0xFF333344);
-        guiGraphics.outline(cancelX, btnY, btnW, btnH, 0xFF6A6A88);
+        guiGraphics.fill(cancelX, btnY, cancelX + btnW, btnY + btnH, hoverCancel ? 0xFF282830 : 0xFF18181E);
+        guiGraphics.outline(cancelX, btnY, btnW, btnH, 0xFF44444E);
         guiGraphics.centeredText(this.font, "Cancel", cancelX + btnW / 2, btnY + 5, 0xFFDDDDDD);
     }
 

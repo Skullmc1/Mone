@@ -64,8 +64,9 @@ public class NotificationHelper {
     }
 
     private static void mac(String text) {
+        String safeText = text == null ? "" : text.replace("\\", "\\\\").replace("\"", "\\\"");
         ProcessBuilder processBuilder = new ProcessBuilder();
-        processBuilder.command("osascript", "-e", "display notification \"" + text + "\" with title \"Mone\"");
+        processBuilder.command("osascript", "-e", "display notification \"" + safeText + "\" with title \"Mone\"");
         try {
             processBuilder.start();
         } catch (IOException e) {

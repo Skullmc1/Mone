@@ -131,7 +131,7 @@ public class CalculationContext {
         this.minFallHeight = 3; // Minimum fall height used by MovementFall
         this.maxFallHeightNoWater = MoneAPI.getSettings().maxFallHeightNoWater.value;
         this.maxFallHeightBucket = MoneAPI.getSettings().maxFallHeightBucket.value;
-        float waterSpeedMultiplier = 1.0f;
+        float waterSpeedMultiplier = 0.0f;
         OUTER: for (EquipmentSlot slot : EquipmentSlot.values()) {
             ItemEnchantments itemEnchantments = Mone.getPlayerContext()
                 .player()
@@ -142,7 +142,7 @@ public class CalculationContext {
                     .getEffects(EnchantmentEffectComponents.ATTRIBUTES);
                 for (EnchantmentAttributeEffect effect : effects) {
                     if (effect.attribute().is(Attributes.WATER_MOVEMENT_EFFICIENCY.unwrapKey().get())) {
-                        waterSpeedMultiplier = effect.amount().calculate(itemEnchantments.getLevel(enchant));
+                        waterSpeedMultiplier = Math.min(1.0f, Math.max(0.0f, effect.amount().calculate(itemEnchantments.getLevel(enchant))));
                         break OUTER;
                     }
                 }

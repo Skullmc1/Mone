@@ -18,19 +18,31 @@
 package mone.behavior;
 
 import mone.Mone;
+import mone.api.MoneAPI;
 import mone.api.event.events.TickEvent;
 import mone.api.process.IMoneProcess;
+import mone.api.utils.BetterBlockPos;
 import mone.api.utils.Helper;
+import net.minecraft.client.gui.screens.DeathScreen;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 /**
- * Runs a sequential queue of Mone commands (macro chains), starting the next command
+ * Runs a sequential queue of Mone commands (macro scripts), starting the next command
  * automatically once the previous task becomes idle.
+ * Supports automatic death recovery (goto death pos -> pickup items -> resume task).
  */
 public final class QueueBehavior extends Behavior implements Helper {
 
@@ -41,6 +53,11 @@ public final class QueueBehavior extends Behavior implements Helper {
     private boolean paused = false;
     private String currentCommand = null;
     private int idleTicks = 0;
+
+    // Death recovery state
+    private boolean awaitingRespawn = false;
+    private BetterBlockPos pendingDeathPos = null;
+    private String interruptedCommand = null;
 
     public QueueBehavior(Mone mone) {
         super(mone);
@@ -73,6 +90,22 @@ public final class QueueBehavior extends Behavior implements Helper {
             paused = false;
         }
         return added;
+    }
+
+    public void runScript(List<String> commands) {
+        clear();
+        for (String cmd : commands) {
+            if (cmd != null && !cmd.isBlank()) {
+                queue.addLast(cmd.trim());
+            }
+        }
+        if (!queue.isEmpty()) {
+            running = true;
+            paused = false;
+            idleTicks = IDLE_TICKS_BEFORE_NEXT;
+            logDirect("[Queue] Starting script with " + queue.size() + " step(s)"
+                    + (MoneAPI.getSettings().queueRecoverOnDeath.value ? " [Death Recovery ON]" : ""));
+        }
     }
 
     public List<String> getQueuedCommands() {
@@ -115,6 +148,26 @@ public final class QueueBehavior extends Behavior implements Helper {
         running = false;
         paused = false;
         idleTicks = 0;
+        awaitingRespawn = false;
+        pendingDeathPos = null;
+        interruptedCommand = null;
+    }
+
+    @Override
+    public void onPlayerDeath() {
+        if (!running || !MoneAPI.getSettings().queueRecoverOnDeath.value) {
+            return;
+        }
+        if (ctx.player() == null) {
+            return;
+        }
+        pendingDeathPos = ctx.playerFeet();
+        interruptedCommand = currentCommand;
+        awaitingRespawn = true;
+        currentCommand = null;
+        idleTicks = 0;
+        logDirect("[Queue] Died at " + pendingDeathPos.x + ", " + pendingDeathPos.y + ", " + pendingDeathPos.z
+                + ". Will recover items and resume after respawn.");
     }
 
     @Override
@@ -123,6 +176,25 @@ public final class QueueBehavior extends Behavior implements Helper {
             return;
         }
         if (!running || paused) {
+            return;
+        }
+
+        if (awaitingRespawn) {
+            if (ctx.player() != null && ctx.player().isAlive() && ctx.player().getHealth() > 0
+                    && !(ctx.minecraft().gui.screen() instanceof DeathScreen)) {
+                awaitingRespawn = false;
+                if (interruptedCommand != null && !interruptedCommand.isBlank()) {
+                    queue.addFirst(interruptedCommand);
+                }
+                if (pendingDeathPos != null) {
+                    queue.addFirst("pickup");
+                    queue.addFirst("goto " + pendingDeathPos.x + " " + pendingDeathPos.y + " " + pendingDeathPos.z);
+                }
+                logDirect("[Queue] Respawned! Heading to death location to recover items...");
+                pendingDeathPos = null;
+                interruptedCommand = null;
+                idleTicks = IDLE_TICKS_BEFORE_NEXT;
+            }
             return;
         }
 
@@ -165,5 +237,56 @@ public final class QueueBehavior extends Behavior implements Helper {
         }
         Optional<IMoneProcess> active = Mone.getPathingControlManager().mostRecentInControl();
         return active.isPresent() && active.get().isActive() && !active.get().isTemporary();
+    }
+
+    // --- Saved Script Presets ---
+
+    private Path scriptsFile() {
+        return Mone.getDirectory().resolve("queue_scripts.properties");
+    }
+
+    public Map<String, String> loadSavedScripts() {
+        Map<String, String> res = new LinkedHashMap<>();
+        Path file = scriptsFile();
+        if (!Files.exists(file)) {
+            return res;
+        }
+        Properties props = new Properties();
+        try (InputStream in = Files.newInputStream(file)) {
+            props.load(in);
+            for (String key : props.stringPropertyNames()) {
+                res.put(key, props.getProperty(key));
+            }
+        } catch (IOException ignored) {
+        }
+        return res;
+    }
+
+    public void saveScript(String name, List<String> steps) {
+        if (name == null || name.isBlank()) {
+            return;
+        }
+        Map<String, String> all = loadSavedScripts();
+        all.put(name.trim(), String.join(" ; ", steps));
+        writeScripts(all);
+    }
+
+    public void deleteSavedScript(String name) {
+        Map<String, String> all = loadSavedScripts();
+        if (all.remove(name) != null) {
+            writeScripts(all);
+        }
+    }
+
+    private void writeScripts(Map<String, String> all) {
+        Properties props = new Properties();
+        props.putAll(all);
+        try {
+            Files.createDirectories(Mone.getDirectory());
+            try (OutputStream out = Files.newOutputStream(scriptsFile())) {
+                props.store(out, "Mone saved queue scripts");
+            }
+        } catch (IOException ignored) {
+        }
     }
 }

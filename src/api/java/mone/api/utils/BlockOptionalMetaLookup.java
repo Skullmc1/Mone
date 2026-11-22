@@ -89,9 +89,12 @@ public class BlockOptionalMetaLookup {
 
     @Override
     public String toString() {
-        return String.format(
-                "BlockOptionalMetaLookup{%s}",
-                Arrays.toString(boms)
-        );
+        if (boms == null || boms.length == 0) {
+            return "(none)";
+        }
+        return Stream.of(boms)
+                .map(bom -> bom.getBlock().getName().getString().toLowerCase(java.util.Locale.ROOT))
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 }

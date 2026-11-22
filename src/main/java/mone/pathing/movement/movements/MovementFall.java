@@ -52,6 +52,7 @@ public class MovementFall extends Movement {
 
     private static final ItemStack STACK_BUCKET_WATER = new ItemStack(Items.WATER_BUCKET);
     private static final ItemStack STACK_BUCKET_EMPTY = new ItemStack(Items.BUCKET);
+    private Boolean willPlaceBucketCached;
 
     public MovementFall(IMone Mone, BetterBlockPos src, BetterBlockPos dest) {
         super(Mone, src, dest, MovementFall.buildPositionsToBreak(src, dest));
@@ -78,9 +79,13 @@ public class MovementFall extends Movement {
     }
 
     private boolean willPlaceBucket() {
+        if (willPlaceBucketCached != null) {
+            return willPlaceBucketCached;
+        }
         CalculationContext context = new CalculationContext(Mone);
         MutableMoveResult result = new MutableMoveResult();
-        return MovementDescend.dynamicFallCost(context, src.x, src.y, src.z, dest.x, dest.z, 0, context.get(dest.x, src.y - 2, dest.z), result);
+        willPlaceBucketCached = MovementDescend.dynamicFallCost(context, src.x, src.y, src.z, dest.x, dest.z, 0, context.get(dest.x, src.y - 2, dest.z), result);
+        return willPlaceBucketCached;
     }
 
     @Override
@@ -101,6 +106,7 @@ public class MovementFall extends Movement {
         }
 
         boolean isWater = destState.getFluidState().getType() instanceof WaterFluid;
+        boolean isSourceWater = isWater && destState.getFluidState().isSource();
         if (!isWater && willPlaceBucket() && !playerFeet.equals(dest)) {
             if (!Inventory.isHotbarSlot(ctx.player().getInventory().findSlotMatchingItem(STACK_BUCKET_WATER)) || ctx.world().dimension() == Level.NETHER) {
                 return state.setStatus(MovementStatus.UNREACHABLE);
@@ -122,7 +128,7 @@ public class MovementFall extends Movement {
             state.setTarget(new MovementTarget(toDest, false));
         }
         if (playerFeet.equals(dest) && (ctx.player().position().y - playerFeet.getY() < 0.094 || isWater)) { // 0.094 because lilypads
-            if (isWater) { // only match water, not flowing water (which we cannot pick up with a bucket)
+            if (isSourceWater) { // only match source water, not flowing water (which we cannot pick up with a bucket)
                 if (Inventory.isHotbarSlot(ctx.player().getInventory().findSlotMatchingItem(STACK_BUCKET_EMPTY))) {
                     ctx.player().getInventory().setSelectedSlot(ctx.player().getInventory().findSlotMatchingItem(STACK_BUCKET_EMPTY));
                     if (ctx.player().getDeltaMovement().y >= 0) {
@@ -133,7 +139,11 @@ public class MovementFall extends Movement {
                 } else {
                     if (ctx.player().getDeltaMovement().y >= 0) {
                         return state.setStatus(MovementStatus.SUCCESS);
-                    } // don't else return state; we need to stay centered because this water might be flowing under the surface
+                    }
+                }
+            } else if (isWater) {
+                if (ctx.player().getDeltaMovement().y >= 0) {
+                    return state.setStatus(MovementStatus.SUCCESS);
                 }
             } else {
                 return state.setStatus(MovementStatus.SUCCESS);

@@ -348,7 +348,7 @@ public class PathExecutor implements IPathExecutor, Helper {
         behavior.Mone.getInputOverrideHandler().setInputForceState(Input.SPRINT, false);
 
         // first and foremost, if allowSprint is off, or if we don't have enough hunger, don't try and sprint
-        if (!new CalculationContext(behavior.Mone, false).canSprint) {
+        if (!MoneAPI.getSettings().allowSprint.value || ctx.player().getFoodData().getFoodLevel() <= 6) {
             return false;
         }
         IMovement current = path.movements().get(pathPosition);

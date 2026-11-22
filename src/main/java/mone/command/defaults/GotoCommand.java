@@ -18,6 +18,8 @@
 package mone.command.defaults;
 
 import mone.api.IMone;
+import mone.api.cache.IWaypoint;
+import mone.api.cache.IWorldData;
 import mone.api.command.Command;
 import mone.api.command.argument.IArgConsumer;
 import mone.api.command.datatypes.ForBlockOptionalMeta;
@@ -25,6 +27,7 @@ import mone.api.command.datatypes.RelativeCoordinate;
 import mone.api.command.datatypes.RelativeGoal;
 import mone.api.command.exception.CommandException;
 import mone.api.pathing.goals.Goal;
+import mone.api.pathing.goals.GoalBlock;
 import mone.api.utils.BetterBlockPos;
 import mone.api.utils.BlockOptionalMeta;
 
@@ -52,16 +55,43 @@ public class GotoCommand extends Command {
             return;
         }
         args.requireMax(1);
-        BlockOptionalMeta destination = args.getDatatypeFor(ForBlockOptionalMeta.INSTANCE);
-        Mone.getGetToBlockProcess().getToBlock(destination);
+        BlockOptionalMeta destination = args.peekDatatypeOrNull(ForBlockOptionalMeta.INSTANCE);
+        if (destination != null) {
+            args.getDatatypeFor(ForBlockOptionalMeta.INSTANCE);
+            Mone.getGetToBlockProcess().getToBlock(destination);
+            return;
+        }
+        String wpName = args.peekString();
+        IWorldData world = Mone.getWorldProvider().getCurrentWorld();
+        if (world != null && world.getWaypoints() != null) {
+            for (IWaypoint wp : world.getWaypoints().getAllWaypoints()) {
+                if (wp.getName() != null && wp.getName().equalsIgnoreCase(wpName)) {
+                    args.getString();
+                    BetterBlockPos loc = wp.getLocation();
+                    logDirect(String.format("Heading to waypoint '%s' (%d, %d, %d).", wp.getName(), loc.x, loc.y, loc.z));
+                    Mone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(loc));
+                    return;
+                }
+            }
+        }
+        // Fallback so standard error message is thrown for invalid block/waypoint
+        Mone.getGetToBlockProcess().getToBlock(args.getDatatypeFor(ForBlockOptionalMeta.INSTANCE));
     }
 
     @Override
     public Stream<String> tabComplete(String label, IArgConsumer args) throws CommandException {
-        // since it's either a goal or a block, I don't think we can tab complete properly?
-        // so just tab complete for the block variant
         args.requireMax(1);
-        return args.tabCompleteDatatype(ForBlockOptionalMeta.INSTANCE);
+        Stream<String> blocks = args.tabCompleteDatatype(ForBlockOptionalMeta.INSTANCE);
+        IWorldData world = Mone.getWorldProvider().getCurrentWorld();
+        if (world == null || world.getWaypoints() == null) {
+            return blocks;
+        }
+        String prefix = args.hasAny() ? args.peekString().toLowerCase() : "";
+        Stream<String> waypoints = world.getWaypoints().getAllWaypoints().stream()
+                .map(IWaypoint::getName)
+                .filter(name -> name != null && !name.isEmpty() && name.toLowerCase().startsWith(prefix))
+                .distinct();
+        return Stream.concat(waypoints, blocks);
     }
 
     @Override

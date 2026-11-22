@@ -177,7 +177,7 @@ public interface MovementHelper extends ActionCosts, Helper {
                 return MAYBE;
             }
         }
-        if (block instanceof CauldronBlock) {
+        if (block instanceof AbstractCauldronBlock) {
             return NO;
         }
         if (state.isPathfindable(PathComputationType.LAND)) {
@@ -241,6 +241,14 @@ public interface MovementHelper extends ActionCosts, Helper {
                 || block == Blocks.VINE
                 || block == Blocks.LADDER
                 || block == Blocks.COCOA
+                || block == Blocks.SWEET_BERRY_BUSH
+                || block == Blocks.POWDER_SNOW
+                || block == Blocks.POINTED_DRIPSTONE
+                || block == Blocks.WITHER_ROSE
+                || block == Blocks.BIG_DRIPLEAF
+                || block == Blocks.SCAFFOLDING
+                || block instanceof CaveVinesBlock
+                || block instanceof GrowingPlantBlock
                 || block instanceof AzaleaBlock
                 || block instanceof DoorBlock
                 || block instanceof FenceGateBlock
@@ -248,7 +256,7 @@ public interface MovementHelper extends ActionCosts, Helper {
                 || !state.getFluidState().isEmpty()
                 || block instanceof TrapDoorBlock
                 || block instanceof EndPortalBlock
-                || block instanceof SkullBlock
+                || block instanceof AbstractSkullBlock
                 || block instanceof ShulkerBoxBlock) {
             return NO;
         }
@@ -378,6 +386,12 @@ public interface MovementHelper extends ActionCosts, Helper {
                 || (block == Blocks.MAGMA_BLOCK && !MoneAPI.getSettings().allowWalkOnMagmaBlocks.value)
                 || block == Blocks.CACTUS
                 || block == Blocks.SWEET_BERRY_BUSH
+                || block == Blocks.POWDER_SNOW
+                || block == Blocks.POINTED_DRIPSTONE
+                || block == Blocks.WITHER_ROSE
+                || block == Blocks.LAVA_CAULDRON
+                || block == Blocks.SCULK_SHRIEKER
+                || block instanceof CampfireBlock
                 || block instanceof BaseFireBlock
                 || block == Blocks.END_PORTAL
                 || block == Blocks.COBWEB
@@ -420,7 +434,7 @@ public interface MovementHelper extends ActionCosts, Helper {
         if (block == Blocks.LADDER || (block == Blocks.VINE && MoneAPI.getSettings().allowVines.value)) { // TODO reconsider this
             return YES;
         }
-        if (block == Blocks.FARMLAND || block == Blocks.DIRT_PATH || block == Blocks.SOUL_SAND) {
+        if (block == Blocks.FARMLAND || block == Blocks.DIRT_PATH || block == Blocks.SOUL_SAND || block == Blocks.MUD) {
             return YES;
         }
         if (block == Blocks.ENDER_CHEST || block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST) {

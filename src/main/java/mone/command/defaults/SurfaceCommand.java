@@ -38,29 +38,47 @@ public class SurfaceCommand extends Command {
     @Override
     public void execute(String label, IArgConsumer args) throws CommandException {
         final BetterBlockPos playerPos = ctx.playerFeet();
-        final int surfaceLevel = ctx.world().getSeaLevel();
-        final int worldHeight = ctx.world().getHeight();
+        final int maxY = ctx.world().getMaxY();
 
-        // Ensure this command will not run if you are above the surface level and the block above you is air
-        // As this would imply that your are already on the open surface
-        if (playerPos.getY() > surfaceLevel && ctx.world().getBlockState(playerPos.above()).getBlock() instanceof AirBlock) {
+        if (!ctx.world().dimensionType().hasCeiling() && ctx.world().canSeeSky(playerPos.above())) {
             logDirect("Already at surface");
             return;
         }
 
-        final int startingYPos = Math.max(playerPos.getY(), surfaceLevel);
-
-        for (int currentIteratedY = startingYPos; currentIteratedY < worldHeight; currentIteratedY++) {
-            final BetterBlockPos newPos = new BetterBlockPos(playerPos.getX(), currentIteratedY, playerPos.getZ());
-
-            if (!(ctx.world().getBlockState(newPos).getBlock() instanceof AirBlock) && newPos.getY() > playerPos.getY()) {
-                Goal goal = new GoalBlock(newPos.above());
-                logDirect(String.format("Going to: %s", goal.toString()));
-                Mone.getCustomGoalProcess().setGoalAndPath(goal);
-                return;
+        // In normal dimensions, scan downward from build height for the highest solid ground with sky access and 2-block headroom
+        if (!ctx.world().dimensionType().hasCeiling()) {
+            for (int y = maxY - 2; y > playerPos.getY(); y--) {
+                BetterBlockPos ground = new BetterBlockPos(playerPos.getX(), y, playerPos.getZ());
+                BetterBlockPos feet = ground.above();
+                BetterBlockPos head = feet.above();
+                if (!(ctx.world().getBlockState(ground).getBlock() instanceof AirBlock)
+                        && ctx.world().getBlockState(feet).getBlock() instanceof AirBlock
+                        && ctx.world().getBlockState(head).getBlock() instanceof AirBlock
+                        && ctx.world().canSeeSky(feet)) {
+                    Goal goal = new GoalBlock(feet);
+                    logDirect(String.format("Heading to the surface at (%d, %d, %d).", feet.x, feet.y, feet.z));
+                    Mone.getCustomGoalProcess().setGoalAndPath(goal);
+                    return;
+                }
+            }
+        } else {
+            // In ceiling dimensions (e.g. Nether), scan upward for the first 2-high air space above solid ground
+            int ceilingLimit = ctx.world().dimensionType().logicalHeight() - 3;
+            for (int y = playerPos.getY() + 1; y < ceilingLimit; y++) {
+                BetterBlockPos ground = new BetterBlockPos(playerPos.getX(), y, playerPos.getZ());
+                BetterBlockPos feet = ground.above();
+                BetterBlockPos head = feet.above();
+                if (!(ctx.world().getBlockState(ground).getBlock() instanceof AirBlock)
+                        && ctx.world().getBlockState(feet).getBlock() instanceof AirBlock
+                        && ctx.world().getBlockState(head).getBlock() instanceof AirBlock) {
+                    Goal goal = new GoalBlock(feet);
+                    logDirect(String.format("Heading to higher ground at (%d, %d, %d).", feet.x, feet.y, feet.z));
+                    Mone.getCustomGoalProcess().setGoalAndPath(goal);
+                    return;
+                }
             }
         }
-        logDirect("No higher location found");
+        logDirect("No higher surface location found.");
     }
 
     @Override

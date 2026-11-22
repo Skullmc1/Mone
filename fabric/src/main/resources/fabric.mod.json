@@ -4,7 +4,7 @@
   "version": "${version}",
 
   "name": "Mone",
-  "description": "Google Maps for Blockgame",
+  "description": "Over-engineered QoL mod",
 
   "license": "LGPL-3.0",
   "icon": "assets/mone/icon.png",

@@ -18,6 +18,7 @@
 package mone.launch.mixins;
 
 import mone.utils.MinimapRenderer;
+import mone.utils.QuickActionWheelScreen;
 import mone.utils.SettingsGuiScreen;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
@@ -53,6 +54,9 @@ public class MixinKeyboardHandler {
                 ci.cancel();
             } else if (event.key() == SettingsGuiScreen.resolveSettingsKeyCode()) {
                 SettingsGuiScreen.open();
+                ci.cancel();
+            } else if (event.key() == QuickActionWheelScreen.resolveRadialKeyCode()) {
+                QuickActionWheelScreen.open();
                 ci.cancel();
             }
         }

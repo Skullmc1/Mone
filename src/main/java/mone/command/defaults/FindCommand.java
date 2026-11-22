@@ -35,7 +35,9 @@ import net.minecraft.world.level.block.Block;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static mone.api.command.IMoneChatControl.FORCE_COMMAND_PREFIX;
@@ -54,31 +56,37 @@ public class FindCommand extends Command {
             toFind.add(args.getDatatypeFor(BlockById.INSTANCE));
         }
         BetterBlockPos origin = ctx.playerFeet();
-        Component[] components = toFind.stream()
+        List<BetterBlockPos> positions = toFind.stream()
                 .flatMap(block ->
                         ctx.worldData().getCachedWorld().getLocationsOf(
                                 BuiltInRegistries.BLOCK.getKey(block).getPath(),
-                                Integer.MAX_VALUE,
+                                200,
                                 origin.x,
-                                origin.y,
+                                origin.z,
                                 4
                         ).stream()
                 )
                 .map(BetterBlockPos::new)
-                .map(this::positionToComponent)
-                .toArray(Component[]::new);
-        if (components.length > 0) {
-            Arrays.asList(components).forEach(this::logDirect);
+                .distinct()
+                .sorted(Comparator.comparingDouble(origin::distSqr))
+                .collect(Collectors.toList());
+        if (!positions.isEmpty()) {
+            int shown = Math.min(positions.size(), 20);
+            logDirect(String.format("Found %d cached location(s) (showing closest %d):", positions.size(), shown));
+            for (int i = 0; i < shown; i++) {
+                logDirect(positionToComponent(positions.get(i), origin));
+            }
         } else {
             logDirect("No positions known, are you sure the blocks are cached?");
         }
     }
 
-    private Component positionToComponent(BetterBlockPos pos) {
+    private Component positionToComponent(BetterBlockPos pos, BetterBlockPos origin) {
+        int dist = (int) Math.round(Math.sqrt(origin.distSqr(pos)));
         String positionText = String.format("%s %s %s", pos.x, pos.y, pos.z);
-        String command = String.format("%sgoal %s", FORCE_COMMAND_PREFIX, positionText);
-        MutableComponent baseComponent = Component.literal(pos.toString());
-        MutableComponent hoverComponent = Component.literal("Click to set goal to this position");
+        String command = String.format("%sgoto %s", FORCE_COMMAND_PREFIX, positionText);
+        MutableComponent baseComponent = Component.literal(String.format("(%d, %d, %d) - %d blocks away", pos.x, pos.y, pos.z, dist));
+        MutableComponent hoverComponent = Component.literal("Click to go to this position");
         baseComponent.setStyle(baseComponent.getStyle()
                 .withColor(ChatFormatting.GRAY)
                 .withInsertion(positionText)

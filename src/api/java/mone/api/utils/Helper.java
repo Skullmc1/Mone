@@ -48,9 +48,7 @@ public interface Helper {
 
     static Component getPrefix() {
         // Inner text component
-        final Calendar now = Calendar.getInstance();
-        final boolean xd = now.get(Calendar.MONTH) == Calendar.APRIL && now.get(Calendar.DAY_OF_MONTH) <= 3;
-        MutableComponent Mone = Component.literal(xd ? "Baritoe" : MoneAPI.getSettings().shortBaritonePrefix.value ? "B" : "Mone");
+        MutableComponent Mone = Component.literal(MoneAPI.getSettings().shortBaritonePrefix.value ? "M" : "Mone");
         Mone.setStyle(Mone.getStyle().withColor(ChatFormatting.GOLD));
 
         // Outer brackets
@@ -134,10 +132,7 @@ public interface Helper {
      * @param error   Whether to log as an error
      */
     default void logNotificationDirect(String message, boolean error) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc != null) {
-            mc.execute(() -> MoneAPI.getSettings().notifier.value.accept(message, error));
-        }
+        java.util.concurrent.CompletableFuture.runAsync(() -> MoneAPI.getSettings().notifier.value.accept(message, error));
     }
 
     /**
@@ -238,7 +233,7 @@ public interface Helper {
 
     default void logUnhandledException(final Throwable exception) {
         HELPER.logDirect("An unhandled exception occurred. " +
-                        "The error is in your game's log, please report this at https://github.com/cabaletta/Mone/issues",
+                        "The error is in your game's log, please report this at https://github.com/Skullmc1/Mone/issues",
                 ChatFormatting.RED);
         exception.printStackTrace();
     }

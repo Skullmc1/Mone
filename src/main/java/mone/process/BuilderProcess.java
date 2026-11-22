@@ -702,7 +702,7 @@ public final class BuilderProcess extends MoneProcessHelper implements IBuilderP
     }
 
     private Goal assemble(BuilderCalculationContext bcc, List<BlockState> approxPlaceable, boolean logMissing) {
-        List<BetterBlockPos> placeable = new ArrayList<>();
+        Set<BetterBlockPos> placeable = new LinkedHashSet<>();
         List<BetterBlockPos> breakable = new ArrayList<>();
         List<BetterBlockPos> sourceLiquids = new ArrayList<>();
         List<BetterBlockPos> flowingLiquids = new ArrayList<>();

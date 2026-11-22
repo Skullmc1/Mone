@@ -112,9 +112,9 @@ public final class MinimapRenderer {
 
     static final int ABGR_UNLOADED = toAbgr(0x181820);
     private static final int ABGR_VOID = toAbgr(0x0E0E14);
-    private static final int COLOR_BG = 0xCC101018;
-    private static final int COLOR_BORDER_OUTER = 0xFF2B2B38;
-    private static final int COLOR_BORDER_INNER = 0xFF55556B;
+    private static final int COLOR_BG = 0xCC09090B;
+    private static final int COLOR_BORDER_OUTER = 0xFF141418;
+    private static final int COLOR_BORDER_INNER = 0xFFFF7A29;
 
     private static final Map<Block, Integer> SPECIAL_BLOCK_COLORS = new HashMap<>();
 
@@ -493,8 +493,8 @@ public final class MinimapRenderer {
             double outerR = frameSize * 0.5;
             double midR = outerR - 1.2;
             double innerR = outerR - BORDER - 0.5;
-            int abgrOuter = toAbgr(0x2B2B38);
-            int abgrInner = toAbgr(0x666680);
+            int abgrOuter = toAbgr(0x141418);
+            int abgrInner = toAbgr(0xFF7A29);
 
             for (int y = 0; y < frameSize; y++) {
                 double dy = y - center;
@@ -1497,7 +1497,8 @@ public final class MinimapRenderer {
 
         int half = mapSize / 2;
         int footerY = mapY + mapSize + BORDER + 1;
-        guiGraphics.fill(mapX - BORDER, footerY, mapX + mapSize + BORDER, footerY + 20, 0xBB101018);
+        guiGraphics.fill(mapX - BORDER, footerY, mapX + mapSize + BORDER, footerY + 20, 0xD809090B);
+        guiGraphics.outline(mapX - BORDER, footerY, mapSize + BORDER * 2, 20, 0xBBFF7A29);
 
         String coords = centerX + ", " + centerY + ", " + centerZ;
         guiGraphics.centeredText(font, coords, mapX + half, footerY + 2, 0xFFFFFFFF);
@@ -1507,15 +1508,15 @@ public final class MinimapRenderer {
         switch (mode) {
             case LAYER -> {
                 modeLabel = isMining ? ("Mining Y:" + centerY) : ("Layer Y:" + centerY);
-                modeColor = 0xFF4AEDD9;
+                modeColor = 0xFFFF8833;
             }
             case CAVE -> {
                 modeLabel = "Cave Y:" + centerY;
-                modeColor = 0xFFFFAA55;
+                modeColor = 0xFFFF5533;
             }
             default -> {
                 modeLabel = "Surface";
-                modeColor = 0xFF88EE88;
+                modeColor = 0xFFFFBB66;
             }
         }
         guiGraphics.centeredText(font, modeLabel, mapX + half, footerY + 11, modeColor);

@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 
 public class QueueCommand extends Command {
 
-    private static final List<String> SUBCOMMANDS = Arrays.asList("add", "list", "skip", "clear", "pause", "resume");
+    private static final List<String> SUBCOMMANDS = Arrays.asList("gui", "add", "list", "skip", "clear", "pause", "resume");
 
     public QueueCommand(IMone mone) {
         super(mone, "queue", "q");
@@ -48,6 +48,11 @@ public class QueueCommand extends Command {
 
         String first = args.peekString().toLowerCase(Locale.ROOT);
         switch (first) {
+            case "gui", "ui", "builder" -> {
+                args.getString();
+                args.requireMax(0);
+                ctx.minecraft().execute(mone.utils.QueueBuilderScreen::open);
+            }
             case "list", "status" -> {
                 args.getString();
                 args.requireMax(0);
